@@ -4,10 +4,10 @@ import io.grpc.stub.StreamObserver;
 import pt.tecnico.sauron.silo.grpc.*;
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
-    /** Game implementation. */
+    /** Sauron implementation. */
     private pt.tecnico.sauron.silo.domain.Silo silo = new pt.tecnico.sauron.silo.domain.Silo();
 
-    //@Override
+    @Override
     public void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
         /*CurrentBoardResponse response = CurrentBoardResponse.newBuilder().setBoard(ttt.toString()).build();
 
@@ -17,27 +17,27 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         responseObserver.onCompleted();*/
     }
 
-    //@Override
+    @Override
     public void camInfo(CamInfoRequest request, StreamObserver<CamInfoResponse> responseObserver) {
 
     }
 
-    //@Override
+    @Override
     public void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
 
     }
 
-    //@Override
+    @Override
     public void track(TrackRequest request, StreamObserver<TrackResponse> responseObserver) {
 
     }
 
-    //@Override
+    @Override
     public void trackMatch(TrackMatchRequest request, StreamObserver<TrackMatchResponse> responseObserver) {
 
     }
 
-    //@Override
+    @Override
     public void trace(TraceRequest request, StreamObserver<TraceResponse> responseObserver) {
 
     }
