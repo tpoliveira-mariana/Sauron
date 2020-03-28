@@ -3,4 +3,104 @@
 //
 syntax = "proto3";
 package pt.tecnico.sauron.silo.grpc;
+option java_multiple_files = true;
 
+import "google/protobuf/timestamp.proto";
+
+enum Status {
+    OK = 0;
+    INVALID_NAME = 1;
+    INVALID_COORDINATES = 2;
+    INVALID_ID = 3;
+}
+
+enum ObjectType {
+    CAR = 0;
+    PERSON = 1;
+}
+
+message Coordinates {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+message Observation {
+    ObjectType type = 1;
+    string id = 2;
+    google.protobuf.Timestamp timestamp = 3;
+}
+
+
+message CamJoinRequest {
+    string name = 1;
+    Coordinates coordinates = 2;
+}
+
+message CamJoinResponse {
+    Status status = 1;
+}
+
+message CamInfoRequest {
+    string name = 1;
+}
+
+message CamInfoResponse {
+    Status status = 1;
+    Coordinates coordinates = 2;
+}
+
+message ReportRequest {
+    string name = 1;
+    repeated Observation observations = 2;
+}
+
+message ReportResponse {
+    Status status = 1;
+}
+
+message TrackRequest {
+    ObjectType type = 1;
+    string id = 2;		// exact id
+}
+
+message TrackResponse {
+    Status status = 1;
+    Observation observation = 2;
+}
+
+message TrackMatchRequest {
+    ObjectType type = 1;
+    string id = 2;		// incomplete id
+}
+
+message TrackMatchResponse {
+    Status status = 1;
+    repeated Observation observations = 2;
+}
+
+message TraceRequest {
+    ObjectType type = 1;
+    string id = 2;		// exact id
+}
+
+message TraceResponse {
+    Status status = 1;
+    repeated Observation observations = 2;
+}
+
+
+service Sauron {
+    rpc CamJoin(CamJoinRequest) returns (CamJoinResponse);
+
+    rpc CamInfo(CamInfoRequest) returns (CamInfoResponse);
+
+    rpc Report(ReportRequest) returns (ReportResponse);
+
+    rpc Track(TrackRequest) returns (TrackResponse);
+
+    rpc TrackMatch(TrackMatchRequest) returns (TrackMatchResponse);
+
+    rpc Trace(TraceRequest) returns (TraceResponse);
+
+    //TODO - control services
+}
