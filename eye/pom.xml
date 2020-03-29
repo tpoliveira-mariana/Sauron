@@ -26,12 +26,6 @@
             <version>1.28.0</version>
             <scope>compile</scope>
         </dependency>
-		<dependency>
-			<groupId>io.grpc</groupId>
-			<artifactId>grpc-api</artifactId>
-			<version>1.28.0</version>
-			<scope>compile</scope>
-		</dependency>
         <dependency>
             <groupId>pt.tecnico.sauron.A20</groupId>
             <artifactId>silo-client</artifactId>
