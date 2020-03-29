@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter;
 
 public class SauronObservation {
 
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-ddTHH:mm:ss");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private SauronObject _obj;
     private SauronCamera _cam;
