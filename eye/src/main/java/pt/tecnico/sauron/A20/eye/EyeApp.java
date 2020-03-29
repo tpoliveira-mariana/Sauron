@@ -7,7 +7,11 @@ import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
+import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
+import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.client.SiloFrontend;
+
+import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.DUPLICATE_CAMERA;
 
 public class EyeApp {
 	private static String PERSON = "person";
@@ -106,17 +110,24 @@ public class EyeApp {
 			frontend.camJoin(target, name, lat, lon);
 			return true;
 		}
-		catch (Exception e) {
-			// TODO catch proper exceptions
-			System.out.println(e.getMessage());
-			return false;
+		catch (SauronException e) {
+			if (e.getErrorMessage() == DUPLICATE_CAMERA) {
+				System.out.println("Camera already registered. Processing observations...");
+				return true;
+			}
+			else {
+				System.out.println(e.getErrorMessageLabel());
+				return false;
+			}
 		}
 	}
 
 	private static boolean handledSpecialLines(SiloFrontend frontend, String target, String camName, String line, List<List<String>> observations) {
 		// blank line
-		if (line.isBlank() && !observations.isEmpty()) {
-			submitObservations(frontend, target, camName, observations);
+		if (line.isBlank()) {
+			if (!observations.isEmpty()) {
+				submitObservations(frontend, target, camName, observations);
+			}
 			return true;
 		}
 		// comment
@@ -155,8 +166,8 @@ public class EyeApp {
 			frontend.report(target, camName, observations);
 			observations.clear();
 		}
-		catch (Exception e) {
-			System.out.println(e.getMessage());
+		catch (SauronException e) {
+			System.out.println(e.getErrorMessageLabel());
 			System.out.println("Observations not submitted.");
 			System.out.println("Shutting down...");
 		}

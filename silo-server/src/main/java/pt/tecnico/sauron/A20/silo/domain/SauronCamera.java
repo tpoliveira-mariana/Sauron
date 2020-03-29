@@ -1,5 +1,10 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
+import pt.tecnico.sauron.A20.exceptions.SauronException;
+
+import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.INVALID_CAM_NAME;
+import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.INVALID_COORDINATES;
+
 public class SauronCamera {
 
     private String _name;
@@ -7,7 +12,7 @@ public class SauronCamera {
     private double _lon;
 
 
-    public SauronCamera(String name, double lat, double lon) {
+    public SauronCamera(String name, double lat, double lon) throws SauronException {
         checkAttributes(name, lat, lon);
         setName(name);
         setLatitude(lat);
@@ -15,12 +20,12 @@ public class SauronCamera {
 
     }
 
-    public void checkAttributes(String name, double lat, double lon){
+    public void checkAttributes(String name, double lat, double lon) throws SauronException {
         if (lat > 90 || lat < -90 || lon > 180 || lon < -180)
-            return; //TODO - coords exception
+            throw new SauronException(INVALID_COORDINATES);
 
         else if (!name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15)
-            return; //TODO - Name exception
+            throw new SauronException(INVALID_CAM_NAME);
     }
 
     public String getName() {
