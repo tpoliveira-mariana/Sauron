@@ -44,65 +44,64 @@ public class EyeApp {
 			lon = Double.parseDouble(args[4]);
 		}
 		catch (Exception e) {
-			System.out.println("Invalid double provided.");
-			System.out.println("Shutting down...");
+			shutDownMessage("Invalid double provided.");
 			return ;
 		}
 
+		processCameraObservations(target, cameraName, lat, lon);
+	}
+
+	private static void processCameraObservations(String target, String cameraName, double lat, double lon) {
 		SiloFrontend frontend = new SiloFrontend();
 
-		if (!registerCamera(frontend, target, cameraName, lat, lon)) {
-			System.out.println("Shutting down...");
-			return;
-		}
+		if (registerCamera(frontend, target, cameraName, lat, lon)) {
 
+			try (Scanner scanner = new Scanner(System.in)) {
+				List<List<String>> observations = new ArrayList<>();
 
-		try (Scanner scanner = new Scanner(System.in)) {
-			List<List<String>> observations = new ArrayList<>();
-
-			while (scanner.hasNextLine()) {
-				String line = scanner.nextLine();
-				if (handledSpecialLines(frontend, target, cameraName, line, observations)) {
-					continue;
+				while (scanner.hasNextLine()) {
+					String line = scanner.nextLine();
+					if (!handledSpecialLine(frontend, target, cameraName, line, observations)) {
+						StringTokenizer st = new StringTokenizer(line, ",");
+						if (st.countTokens() != 2) {
+							skipMessage("Invalid command.");
+							continue;
+						}
+						processObservation(observations, st);
+					}
 				}
 
-				StringTokenizer st = new StringTokenizer(line, ",");
-				if (st.countTokens() != 2) {
-					System.out.println("Invalid command.");
-					System.out.println("Skipping...");
-					continue;
-				}
+				submitObservations(frontend, target, cameraName, observations);
 
-				String objectType = st.nextToken();
-				String objectId = st.nextToken();
-
-
-				if (!checkObsArguments(objectType, objectId)) {
-					System.out.println("Skipping...");
-					continue;
-				}
-
-				List<String> obs = new ArrayList<>();
-				obs.add(objectType);
-				obs.add(objectId);
-				observations.add(obs);
+			} catch (Exception e) {
+				System.out.println(e.getMessage());
 			}
-
-			submitObservations(frontend, target, cameraName, observations);
 		}
-		catch (Exception e) {
-			System.out.println(e.getMessage());
-		}
+	}
 
+	private static void processObservation(List<List<String>> observations, StringTokenizer st) {
+		String objectType = st.nextToken();
+		String objectId = st.nextToken();
+
+		if (checkObsArguments(objectType, objectId)) {
+			addObservation(observations, objectType, objectId);
+		}
+	}
+
+	private static void addObservation(List<List<String>> observations, String objectType, String objectId) {
+		List<String> obs = new ArrayList<>();
+		obs.add(objectType);
+		obs.add(objectId);
+		observations.add(obs);
 	}
 
 	private static boolean registerCamera(SiloFrontend frontend, String target, String name, double lat, double lon) {
 		if (!name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15) {
-			System.out.println("Invalid camera name provided.");
+			shutDownMessage("Invalid camera name provided.");
 			return false;
 		}
 		else if (lat > 90 || lat < -90 || lon > 180 || lon < -180) {
-			System.out.println("Invalid coordinates provided.");
+			shutDownMessage("Invalid coordinates provided.");
 			return false;
 		}
 
@@ -116,13 +115,13 @@ public class EyeApp {
 				return true;
 			}
 			else {
-				System.out.println(e.getErrorMessageLabel());
+				shutDownMessage(e.getErrorMessageLabel());
 				return false;
 			}
 		}
 	}
 
-	private static boolean handledSpecialLines(SiloFrontend frontend, String target, String camName, String line, List<List<String>> observations) {
+	private static boolean handledSpecialLine(SiloFrontend frontend, String target, String camName, String line, List<List<String>> observations) {
 		// blank line
 		if (line.isBlank()) {
 			if (!observations.isEmpty()) {
@@ -138,8 +137,7 @@ public class EyeApp {
 		else if (line.startsWith("zzz")) {
 			StringTokenizer st = new StringTokenizer(line, ",");
 			if (st.countTokens() != 2) {
-				System.out.println("Invalid command.");
-				System.out.println("Skipping...");
+				skipMessage("Invalid command.");
 				return true;
 			}
 			st.nextToken();	// remove zzz
@@ -150,8 +148,7 @@ public class EyeApp {
 
 			}
 			catch (NumberFormatException ne) {
-				System.out.println("Invalid command.");
-				System.out.println("Skipping...");
+				skipMessage("Invalid command.");
 			}
 			catch (InterruptedException ie) {
 					Thread.currentThread().interrupt();
@@ -168,8 +165,7 @@ public class EyeApp {
 		}
 		catch (SauronException e) {
 			System.out.println(e.getErrorMessageLabel());
-			System.out.println("Observations not submitted.");
-			System.out.println("Shutting down...");
+			shutDownMessage("Observations not submitted.");
 		}
 
 	}
@@ -218,6 +214,16 @@ public class EyeApp {
 		catch(NumberFormatException e){
 			return false;
 		}
+	}
+
+	private static void skipMessage(String msg) {
+		System.out.println(msg);
+		System.out.println("Skipping...");
+	}
+
+	private static void shutDownMessage(String msg) {
+		System.out.println(msg);
+		System.out.println("Shutting down...");
 	}
 
 
