@@ -15,8 +15,8 @@ public class SauronCar extends SauronObject {
         if (id.length() != 6)
             return;
         for (int i = 0; i <3; i++){
-            char firstChar = id.charAt(id.charAt(2 * i));
-            char secChar = id.charAt(id.charAt(2 * i + 1));
+            char firstChar = id.charAt(2 * i);
+            char secChar = id.charAt(2 * i + 1);
             if (Character.isDigit(firstChar) && Character.isDigit(secChar))
                 numFields++;
             else if (!(Character.isUpperCase(firstChar) && Character.isUpperCase(secChar)))

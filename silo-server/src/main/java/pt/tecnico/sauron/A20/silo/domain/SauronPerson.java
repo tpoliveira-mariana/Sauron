@@ -12,7 +12,10 @@ public class SauronPerson extends SauronObject {
     @Override
     protected void checkId(String id) {
         try{
-            Long.parseLong(id);
+            if (Long.parseLong(id) <= 0)
+                //TODO - throw exception
+                return;
+
         }
         catch(NumberFormatException e){
             //TODO - throw exception

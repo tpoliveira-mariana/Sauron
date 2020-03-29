@@ -134,7 +134,7 @@ public class EyeApp {
 			st.nextToken();	// remove zzz
 			try {
 				int timeout = Integer.parseInt(st.nextToken());
-				TimeUnit.SECONDS.sleep(timeout / 1000);
+				TimeUnit.MILLISECONDS.sleep(timeout);
 				return true;
 
 			}
@@ -164,11 +164,11 @@ public class EyeApp {
 	}
 
 	private static boolean checkObsArguments(String type, String id) {
-		if (type != CAR && type != PERSON) {
+		if (!type.equals(CAR)  && !type.equals(PERSON)) {
 			System.out.println("Invalid object type provided.");
 			return false;
 		}
-		else if ((type == CAR && !checkCarId(id)) || (type == PERSON && !checkPersonId(id))) {
+		else if ((type.equals(CAR) && !checkCarId(id)) || (type.equals(PERSON) && !checkPersonId(id))) {
 			System.out.println(String.format("Invalid %s identifier provided.", type));
 			return false;
 		}
@@ -183,8 +183,8 @@ public class EyeApp {
 			return false;
 
 		for (int i = 0; i <3; i++){
-			char firstChar = id.charAt(id.charAt(2 * i));
-			char secChar = id.charAt(id.charAt(2 * i + 1));
+			char firstChar = id.charAt(2 * i);
+			char secChar = id.charAt(2 * i + 1);
 
 			if (Character.isDigit(firstChar) && Character.isDigit(secChar))
 				numFields++;
@@ -202,7 +202,7 @@ public class EyeApp {
 	private static boolean checkPersonId(String id) {
 		try{
 			Long.parseLong(id);
-			return true;
+			return Long.parseLong(id) > 0;
 		}
 		catch(NumberFormatException e){
 			return false;
