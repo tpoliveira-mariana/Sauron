@@ -15,6 +15,7 @@ enum Status {
     INVALID_ID = 4;
     INVALID_TYPE = 5;
     DUPLICATE_CAMERA = 6;
+    DUPLICATE_CAM_NAME = 7;
 }
 
 enum ObjectType {

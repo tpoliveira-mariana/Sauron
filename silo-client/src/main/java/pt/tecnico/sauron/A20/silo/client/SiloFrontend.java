@@ -84,6 +84,8 @@ public class SiloFrontend {
         switch (status) {
             case DUPLICATE_CAMERA:
                 throw new SauronException(DUPLICATE_CAMERA);
+            case DUPLICATE_CAM_NAME:
+                throw new SauronException(DUPLICATE_CAM_NAME);
 
             case INVALID_NAME:
             case INEXISTENT_CAMERA:

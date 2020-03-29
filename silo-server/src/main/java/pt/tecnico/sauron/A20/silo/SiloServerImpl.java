@@ -32,6 +32,9 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                 case DUPLICATE_CAMERA:
                     builder.setStatus(Status.DUPLICATE_CAMERA);
                     break;
+                case DUPLICATE_CAM_NAME:
+                    builder.setStatus(Status.DUPLICATE_CAM_NAME);
+                    break;
                 case INVALID_COORDINATES:
                     builder.setStatus(Status.INVALID_COORDINATES);
                     break;

@@ -25,8 +25,16 @@ public class Silo {
     }
 
     public void addCamera(SauronCamera cam) throws SauronException {
-        if(_cams.putIfAbsent(cam.getName(), cam) != null)
+        SauronCamera test = _cams.get(cam.getName());
+
+        if (test != null && test.getLatitude() == cam.getLatitude() && test.getLongitude() == cam.getLongitude())  {
             throw new SauronException(DUPLICATE_CAMERA);
+        }
+        else if (test != null) {
+            throw new  SauronException(DUPLICATE_CAM_NAME);
+        }
+        _cams.put(cam.getName(), cam);
+
     }
 
     public void addObservation(SauronObservation obs) {
