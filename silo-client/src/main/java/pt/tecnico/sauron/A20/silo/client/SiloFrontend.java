@@ -43,7 +43,6 @@ public class SiloFrontend {
 
     }
 
-
     public void report(String target, String name, List<List<String>> observations) throws SauronException{
         SauronGrpc.SauronBlockingStub stub = getStub(target);
 
@@ -59,21 +58,20 @@ public class SiloFrontend {
         ReportResponse response = stub.report(request);
 
         Status status = response.getStatus();
-        //TODO- create appropriate status types
         if (status != Status.OK)
             reactToStatus(status);
 
     }
 
-    public void track(String target, String type, String id) {
+    public void track(String target, String type, String id) throws SauronException {
         System.out.println("Track");
     }
 
-    public void trackMatch(String target, String type, String id) {
+    public void trackMatch(String target, String type, String id) throws SauronException {
         System.out.println("TrackMatch");
     }
 
-    public void trace(String target, String type, String id) {
+    public void trace(String target, String type, String id) throws SauronException {
         System.out.println("Trace");
     }
 
@@ -88,24 +86,28 @@ public class SiloFrontend {
                 throw new SauronException(DUPLICATE_CAMERA);
 
             case INVALID_NAME:
+            case INEXISTANT_CAMERA:
                 throw new SauronException(INVALID_CAM_NAME);
 
             case INVALID_COORDINATES:
                 throw new SauronException(INVALID_COORDINATES);
+            case INVALID_ID:
+                throw new SauronException(INVALID_ID);
+            case INVALID_TYPE:
+                throw new SauronException(TYPE_DOES_NOT_EXIST);
             default:
                 //TODO throw exception
         }
     }
 
-    private ObjectType getObjectType(String type) {
+    private ObjectType getObjectType(String type) throws SauronException{
         switch (type){
             case "person":
                 return ObjectType.PERSON;
             case "car":
                 return ObjectType.CAR;
             default:
-                //TODO- throw exception
-                return ObjectType.UNRECOGNIZED;
+                throw new SauronException(TYPE_DOES_NOT_EXIST);
         }
     }
 

@@ -1,6 +1,7 @@
 package pt.tecnico.sauron.A20.spotter;
 
 
+import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.client.SiloFrontend;
 
 import java.util.Scanner;
@@ -64,6 +65,8 @@ public class SpotterApp {
 						System.out.println("Exiting!");
 						return;
 					case "help":
+						status = displayHelp();
+						break;
 					default:
 						System.out.println("Invalid Usage!");
 						status = displayHelp();
@@ -76,22 +79,29 @@ public class SpotterApp {
 	}
 
 	private static boolean spotCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO- catch exceptions
-		if (arguments.length != 3)
+		//TODO- catch specific exceptions
+		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
 			return false;
-		if (!checkObjectArguments(arguments[1], arguments[2], true))
-			return false;
-		if (!arguments[2].contains("*"))
-			frontend.track(target, arguments[0], arguments[1]);
-		else
-			frontend.trackMatch(target, arguments[0], arguments[1]);
+		try {
+			if (!arguments[2].contains("*"))
+				frontend.track(target, arguments[0], arguments[1]);
+			else
+				frontend.trackMatch(target, arguments[0], arguments[1]);
+		} catch(SauronException e) {
+			System.out.println("Invalid usage of spot");
+		}
 		return true;
 	}
 
 	private static boolean trailCommand(SiloFrontend frontend, String target, String[] arguments) {
+		//TODO- catch specific exceptions
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
 			return false;
-		frontend.trace(target, arguments[0], arguments[1]);
+		try {
+			frontend.trace(target, arguments[0], arguments[1]);
+		} catch(SauronException e){
+			System.out.println("Invalid usage of trace");
+		}
 		return true;
 	}
 
@@ -118,8 +128,23 @@ public class SpotterApp {
 	}
 
 	private static boolean displayHelp() {
-		//TODO-print help messages
-		System.out.println("Usage!");
+		System.out.println("\t\t-=+=-");
+		System.out.println("spot  - gets the last observation of the object of type <type> and id <id>");
+		System.out.println("      - id can contain * meaning any match, for example 1*2 means any number starting with 1 and ending with 2");
+		System.out.println("\tUsage: spot <ObjectType> <ObjectId>");
+		System.out.println("trace - gets all the observation of the object of type <type> and exact id <id>");
+		System.out.println("\tUsage: trace <ObjectType> <ObjectId>");
+		System.out.println("ping  - checks status of the server");
+		System.out.println("\tUsage: ping");
+		System.out.println("clear - clears the server");
+		System.out.println("\tUsage: clear");
+		System.out.println("init  - parameters to start the server");
+		System.out.println("\tUsage: init");
+		System.out.println("exit  - leaves the program");
+		System.out.println("\tUsage: exit");
+		System.out.println("help  - show program usage");
+		System.out.println("\tUsage: help");
+		System.out.println("\t\t-=+=-");
 		return true;
 	}
 

@@ -12,6 +12,8 @@ import pt.tecnico.sauron.A20.silo.grpc.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.TYPE_DOES_NOT_EXIST;
+
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     /** Sauron implementation. */
@@ -55,8 +57,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setStatus(Status.OK);
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
         }
-        catch (NullPointerException e) {
-            builder.setStatus(Status.INEXISTENT_CAMERA);
+        catch (SauronException e) {
+            builder.setStatus(Status.INEXISTANT_CAMERA);
         }
 
         CamInfoResponse response = builder.build();
@@ -67,23 +69,44 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
     @Override
     public void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
-        //TODO-Exceptions and status
         ReportResponse.Builder builder = ReportResponse.newBuilder();
+        SauronCamera cam = null;
+        boolean camerror = false;
         try {
-            SauronCamera cam = silo.getCamByName(request.getName());
-            List<Observation> observations = request.getObservationsList();
-            for(Observation obs: observations) {
-                SauronObject obj = silo.getObjectByTypeAndId(getType(obs.getType()), obs.getId());
-                if (obj == null)
-                    obj = createNewObject(obs);
+            cam = silo.getCamByName(request.getName());
+        } catch(SauronException e) {
+            builder.setStatus(Status.INEXISTANT_CAMERA);
+            camerror = true;
+        }
+        List<Observation> observations = request.getObservationsList();
+        boolean error = false;
+        for(Observation obs: observations) {
+            if (camerror) break;
+
+            try {
+                SauronObject obj = silo.getObjectByTypeAndId(getObjectType(obs.getType()), obs.getId());
                 SauronObservation observation = new SauronObservation(obj, cam, LocalDateTime.now());
                 silo.addObservation(observation);
+                builder.setStatus(Status.OK);
             }
-        } catch (NullPointerException e) {
-                //TODO-catch exceptions
-                builder.setStatus(Status.INEXISTANT_CAMERA);
+            catch(SauronException e) {
+                error = true;
+                switch(e.getErrorMessage()) {
+                    case INVALID_PERSON_IDENTIFIER:
+                    case INVALID_CAR_ID:
+                        builder.setStatus(Status.INVALID_ID);
+                        break;
+                    case TYPE_DOES_NOT_EXIST:
+                        builder.setStatus(Status.INVALID_TYPE);
+                        break;
+                    default:
+                        builder.setStatus(Status.UNRECOGNIZED);
+                }
+            }
         }
 
+        if (!error)
+            builder.setStatus(Status.OK);
         ReportResponse response = builder.build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -104,28 +127,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
     }
 
-    private SauronObject createNewObject(Observation observation) {
-        //TODO-Should this be moved to silo???
-        switch (getType(observation.getType())){
-            case "person":
-                return new SauronPerson(observation.getId());
-            case "car":
-                return new SauronCar(observation.getId());
-            default:
-                //TODO- throw exception
-                return null;
-        }
-    }
-
-    private String getType(ObjectType type) {
+    private String getObjectType(ObjectType type) throws SauronException{
         switch (type){
             case PERSON:
                 return "person";
             case CAR:
                 return "car";
             default:
-                //TODO- throw exception
-                return "";
+                throw new SauronException(TYPE_DOES_NOT_EXIST);
         }
     }
 
