@@ -1,17 +1,11 @@
-package pt.tecnico.sauron.silo.domain;
+package pt.tecnico.sauron.A20.silo.domain;
 
-import java.util.List;
 
 public abstract class SauronObject {
 
     private String _id;
-    private List<SauronObservation> _obs;
 
-    public SauronObject() { }
-
-    public void addObservation(SauronObservation obs) {
-        _obs.add(obs);
-    }
+    public SauronObject() {}
 
     protected void setId(String id) {
         _id = id;

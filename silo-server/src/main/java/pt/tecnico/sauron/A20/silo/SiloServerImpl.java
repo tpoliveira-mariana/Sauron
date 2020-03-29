@@ -1,11 +1,17 @@
-package pt.tecnico.sauron.silo;
+package pt.tecnico.sauron.A20.silo;
 
+import com.google.protobuf.Timestamp;
 import io.grpc.stub.StreamObserver;
-import pt.tecnico.sauron.silo.grpc.*;
+import pt.tecnico.sauron.A20.silo.domain.SauronObservation;
+import pt.tecnico.sauron.A20.silo.domain.Silo;
+import pt.tecnico.sauron.A20.silo.grpc.*;
+
+import java.io.FileDescriptor;
+
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     /** Sauron implementation. */
-    private pt.tecnico.sauron.silo.domain.Silo silo = new pt.tecnico.sauron.silo.domain.Silo();
+    private Silo silo = new Silo();
 
     @Override
     public void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {

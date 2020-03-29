@@ -1,4 +1,4 @@
-package pt.tecnico.sauron.eye;
+package pt.tecnico.sauron.A20.eye;
 
 
 public class EyeApp {

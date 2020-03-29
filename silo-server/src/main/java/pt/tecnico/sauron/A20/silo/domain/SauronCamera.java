@@ -1,4 +1,4 @@
-package pt.tecnico.sauron.silo.domain;
+package pt.tecnico.sauron.A20.silo.domain;
 
 public class SauronCamera {
 
@@ -46,11 +46,6 @@ public class SauronCamera {
 
     private void setLongitude(double lon) {
         _lon = lon;
-    }
-
-    @Override
-    public int hashCode() {
-        return _name.hashCode();
     }
 
 }

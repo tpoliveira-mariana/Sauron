@@ -1,4 +1,4 @@
-package pt.tecnico.sauron.silo.domain;
+package pt.tecnico.sauron.A20.silo.domain;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

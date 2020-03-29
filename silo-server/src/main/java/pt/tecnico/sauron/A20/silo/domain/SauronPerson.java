@@ -1,16 +1,12 @@
-package pt.tecnico.sauron.silo.domain;
+package pt.tecnico.sauron.A20.silo.domain;
+
+
 
 public class SauronPerson extends SauronObject {
 
     public SauronPerson(String id) {
         checkId(id);
         setId(id);
-    }
-
-    public SauronPerson(String id, SauronObservation obs) {
-        checkId(id);
-        setId(id);
-        addObservation(obs);
     }
 
     @Override
@@ -30,8 +26,10 @@ public class SauronPerson extends SauronObject {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof SauronPerson)
-            return getId() == ((SauronPerson)obj).getId();
+        if (obj instanceof SauronPerson) {
+            SauronPerson person = (SauronPerson) obj;
+            return getId().equals(person.getId());
+        }
         return false;
     }
 

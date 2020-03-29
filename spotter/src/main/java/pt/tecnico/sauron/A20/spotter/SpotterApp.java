@@ -1,4 +1,4 @@
-package pt.tecnico.sauron.spotter;
+package pt.tecnico.sauron.A20.spotter;
 
 
 public class SpotterApp {

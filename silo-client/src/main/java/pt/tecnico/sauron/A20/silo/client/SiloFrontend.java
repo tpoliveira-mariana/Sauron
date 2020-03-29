@@ -1,7 +1,7 @@
-package pt.tecnico.sauron.silo.client;
+package pt.tecnico.sauron.A20.silo.client;
 
 import io.grpc.stub.StreamObserver;
-import pt.tecnico.sauron.silo.grpc.*;
+import pt.tecnico.sauron.A20.silo.grpc.*;
 
 import java.util.List;
 

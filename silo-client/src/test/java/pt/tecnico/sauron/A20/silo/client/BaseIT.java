@@ -1,4 +1,4 @@
-package pt.tecnico.sauron.silo.client;
+package pt.tecnico.sauron.A20.silo.client;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

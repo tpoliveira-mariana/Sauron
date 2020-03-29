@@ -17,7 +17,7 @@
 	<properties>
 		<!-- see parent POM for more properties -->
 
-		<mainclass>pt.tecnico.sauron.spotter.SpotterApp</mainclass>
+		<mainclass>pt.tecnico.sauron.A20.spotter.SpotterApp</mainclass>
 	</properties>
 
 	<dependencies>
