@@ -3,6 +3,9 @@ package pt.tecnico.sauron.A20.silo;
 
 import io.grpc.stub.StreamObserver;
 import pt.tecnico.sauron.A20.silo.domain.*;
+import pt.tecnico.sauron.A20.exceptions.SauronException;
+import pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
+import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 
@@ -22,8 +25,21 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             silo.addCamera(newCam);
             builder.setStatus(Status.OK);
         }
-        catch(Exception e) {
-            //TODO handle exceptions
+        catch(SauronException e) {
+            switch(e.getErrorMessage()) {
+                case DUPLICATE_CAMERA:
+                    builder.setStatus(Status.DUPLICATE_CAMERA);
+                    break;
+                case INVALID_COORDINATES:
+                    builder.setStatus(Status.INVALID_COORDINATES);
+                    break;
+                case INVALID_CAM_NAME:
+                    builder.setStatus(Status.INVALID_NAME);
+                    break;
+                default:
+                    builder.setStatus(Status.UNRECOGNIZED);
+            }
+
         }
 
         CamJoinResponse response = builder.build();
@@ -40,7 +56,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
         }
         catch (NullPointerException e) {
-            builder.setStatus(Status.INEXISTANT_CAMERA);
+            builder.setStatus(Status.INEXISTENT_CAMERA);
         }
 
         CamInfoResponse response = builder.build();

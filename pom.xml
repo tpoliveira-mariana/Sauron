@@ -41,6 +41,7 @@
 		<module>silo-client</module>
 		<module>eye</module>
 		<module>spotter</module>
+		<module>exceptions</module>
 	</modules>
 
 	<dependencies>

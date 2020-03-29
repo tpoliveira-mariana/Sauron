@@ -1,6 +1,10 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
 import java.util.*;
+import pt.tecnico.sauron.A20.exceptions.*;
+
+import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.DUPLICATE_CAMERA;
+
 
 public class Silo {
 
@@ -18,10 +22,9 @@ public class Silo {
         return _objs;
     }
 
-    public void addCamera(SauronCamera cam) {
+    public void addCamera(SauronCamera cam) throws SauronException {
         if(_cams.putIfAbsent(cam.getName(), cam) != null)
-            //TODO - return exception
-            return;
+            throw new SauronException(DUPLICATE_CAMERA);
     }
 
     public void addObservation(SauronObservation obs) {

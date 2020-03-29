@@ -1,6 +1,8 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
 
+import pt.tecnico.sauron.A20.exceptions.SauronException;
+
 public abstract class SauronObject {
 
     private String _id;
@@ -17,7 +19,7 @@ public abstract class SauronObject {
 
     public abstract String getType();
 
-    protected abstract void checkId(String id);
+    protected abstract void checkId(String id) throws SauronException;
 
     @Override
     public int hashCode() {
