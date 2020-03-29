@@ -58,7 +58,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
         }
         catch (SauronException e) {
-            builder.setStatus(Status.INEXISTANT_CAMERA);
+            builder.setStatus(Status.INEXISTENT_CAMERA);
         }
 
         CamInfoResponse response = builder.build();
@@ -75,7 +75,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             cam = silo.getCamByName(request.getName());
         } catch(SauronException e) {
-            builder.setStatus(Status.INEXISTANT_CAMERA);
+            builder.setStatus(Status.INEXISTENT_CAMERA);
             camerror = true;
         }
         List<Observation> observations = request.getObservationsList();

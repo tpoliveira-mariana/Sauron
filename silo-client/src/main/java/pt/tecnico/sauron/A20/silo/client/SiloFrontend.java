@@ -86,7 +86,7 @@ public class SiloFrontend {
                 throw new SauronException(DUPLICATE_CAMERA);
 
             case INVALID_NAME:
-            case INEXISTANT_CAMERA:
+            case INEXISTENT_CAMERA:
                 throw new SauronException(INVALID_CAM_NAME);
 
             case INVALID_COORDINATES:
