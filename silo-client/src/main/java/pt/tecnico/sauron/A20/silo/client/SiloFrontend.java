@@ -48,20 +48,37 @@ public class SiloFrontend {
 
     }
 
-    public void report(String name, List<List<String>> observations) {
+    public void report(String target, String name, List<List<String>> observations) {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
+
+        for (List<String> observation : observations){
+            ObjectType type = getObjectType(observation.get(0));
+            Observation builderObs = Observation.newBuilder().setType(type).setId(observation.get(1)).build();
+            builder.addObservations(builderObs);
+        }
+
+        ReportRequest request = builder.build();
+        ReportResponse response = stub.report(request);
+
+        Status status = response.getStatus();
+        //TODO- create appropriate status types
+        if (status != Status.OK)
+            reactToStatus(status);
 
     }
 
-    public void track(String type, String id) {
-
+    public void track(String target, String type, String id) {
+        System.out.println("Track");
     }
 
-    public void trackMatch(String type, String id) {
-
+    public void trackMatch(String target, String type, String id) {
+        System.out.println("TrackMatch");
     }
 
-    public void trace(String type, String id) {
-
+    public void trace(String target, String type, String id) {
+        System.out.println("Trace");
     }
 
     private SauronGrpc.SauronBlockingStub getStub(String target) {
@@ -84,8 +101,16 @@ public class SiloFrontend {
         }
     }
 
-
-
-
+    private ObjectType getObjectType(String type) {
+        switch (type){
+            case "person":
+                return ObjectType.PERSON;
+            case "car":
+                return ObjectType.CAR;
+            default:
+                //TODO- throw exception
+                return ObjectType.UNRECOGNIZED;
+        }
+    }
 
 }
