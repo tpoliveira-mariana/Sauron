@@ -40,4 +40,8 @@ public class Silo {
         }
     }
 
+    public SauronCamera getCamByName(String name) {
+        return _cams.get(name);
+    }
+
 }

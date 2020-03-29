@@ -16,10 +16,9 @@ public class SauronCamera {
     }
 
     public void checkAttributes(String name, double lat, double lon){
-        if (lat > 90 || lat < -90)
-            return; //TODO - Lat exception
-        else if (lon > 180 || lon < -180)
-            return; //TODO - Lon exception
+        if (lat > 90 || lat < -90 || lon > 180 || lon < -180)
+            return; //TODO - coords exception
+
         else if (!name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15)
             return; //TODO - Name exception
     }
