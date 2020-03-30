@@ -29,9 +29,9 @@ This change is important for code dependency management, to make sure that your 
 | T1       | cam_join, cam_info, eye       | _Mariana Oliveira_   |
 | T2       | report, spotter               | _Daniel Lopes_       |
 | T3       | track, trackMatch, trace      | _Alexandre Duarte_   |
-| T4       | test T1                       | _Alexandre Duarte_      |
-| T5       | test T2                       | _Mariana Oliveira_  |
-| T6       | test T3                       | _Daniel Lopes_        |
+| T4       | test T1                       | _Alexandre Duarte_   |
+| T5       | test report, trace            | _Mariana Oliveira_   |
+| T6       | test track, trackMatch        | _Daniel Lopes_       |
 
 
 ## Getting Started
