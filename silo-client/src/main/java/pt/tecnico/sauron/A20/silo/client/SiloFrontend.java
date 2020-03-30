@@ -7,8 +7,9 @@ import io.grpc.ManagedChannelBuilder;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 
-import java.util.Comparator;
-import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
@@ -176,6 +177,42 @@ public class SiloFrontend {
                 return "car";
             default:
                 return null;
+        }
+    }
+
+    private void ctrl_init(String target, String fileName) throws SauronException {
+        try {
+            File file = new File(fileName);
+            Scanner scanner = new Scanner(file);
+            String camName = null;
+            List<List<String>> data = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                StringTokenizer st = new StringTokenizer(line, ",");
+                String type = st.nextToken();
+                if (type.equals("done") && !data.isEmpty() && camName != null) {
+                    report(target, camName, data);
+                }
+                if (type.equals("cam")) {
+                    report(target, camName, data);
+                    data.clear();
+                    camName = st.nextToken();
+                    camJoin(target, camName, Double.parseDouble(st.nextToken()), Double.parseDouble(st.nextToken()));
+                }
+                else {
+                    List<String> obs = new ArrayList<>();
+                    obs.add(type);
+                    obs.add(st.nextToken());
+                    data.add(obs);
+                }
+            }
+
+        } catch (SauronException e) {
+            throw e;
+        }
+        catch (Exception e) {
+            throw new SauronException(ERROR_PROCESSING_FILE);
         }
     }
 }
