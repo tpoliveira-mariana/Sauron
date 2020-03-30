@@ -8,8 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReportIT extends BaseIT {
-    private static SiloFrontend frontend = new SiloFrontend("localhost", "port");
+
     private static final String TEST_DATA_FILE = "./src/test/reportIT_data.txt";
+    private static SiloFrontend frontend;
+    private static final String HOST = "localhost";
+    private static final String PORT = "8000";
     private static final String CAM_NAME_1 = "Tagus";
     private static final String INEXISTENT_CAM_NAME = "Test";
     private static final String PERSON_ID_1 = "1";
@@ -25,8 +28,9 @@ public class ReportIT extends BaseIT {
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() {
+        frontend = new SiloFrontend(HOST, PORT);
         try {
-            frontend.ctrl_init(TEST_DATA_FILE);
+            frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
