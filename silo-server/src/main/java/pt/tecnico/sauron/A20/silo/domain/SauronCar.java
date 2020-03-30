@@ -17,7 +17,7 @@ public class SauronCar extends SauronObject {
     protected void checkId(String id) throws SauronException {
         int numFields = 0;
         if (id.length() != 6)
-            return;
+            throw new SauronException(INVALID_CAR_ID);
         for (int i = 0; i <3; i++) {
             char firstChar = id.charAt(2 * i);
             char secChar = id.charAt(2 * i + 1);
@@ -30,7 +30,6 @@ public class SauronCar extends SauronObject {
             throw new SauronException(INVALID_CAR_ID);
         }
 
-        // TODO - check and exceptions
         return;
     }
 

@@ -9,6 +9,7 @@ import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -17,7 +18,7 @@ import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 
 public class SiloFrontend {
 
-    public SiloFrontend() { }
+    public SiloFrontend() {}
 
     public void camJoin(String target, String name, double lat, double lon) throws SauronException {
         SauronGrpc.SauronBlockingStub stub = getStub(target);
@@ -134,8 +135,10 @@ public class SiloFrontend {
                     report(target, camName, data);
                 }
                 if (type.equals("cam")) {
-                    report(target, camName, data);
-                    data.clear();
+                    if (!data.isEmpty()) {
+                        report(target, camName, data);
+                        data.clear();
+                    }
                     camName = st.nextToken();
                     camJoin(target, camName, Double.parseDouble(st.nextToken()), Double.parseDouble(st.nextToken()));
                 }
@@ -146,11 +149,11 @@ public class SiloFrontend {
                     data.add(obs);
                 }
             }
+            scanner.close();
 
         } catch (SauronException e) {
             throw e;
-        }
-        catch (Exception e) {
+        } catch (FileNotFoundException e) {
             throw new SauronException(ERROR_PROCESSING_FILE);
         }
     }
