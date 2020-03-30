@@ -18,25 +18,27 @@ import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 
 public class SiloFrontend {
 
-    public SiloFrontend() {}
+    private SauronGrpc.SauronBlockingStub _stub;
 
-    public void camJoin(String target, String name, double lat, double lon) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
+    public SiloFrontend(String host, String port) {
+        String target = host + ":" + port;
+        final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+        _stub = SauronGrpc.newBlockingStub(channel);
+    }
 
+    public void camJoin(String name, double lat, double lon) throws SauronException {
         Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
         CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
 
-        Status status = stub.camJoin(request).getStatus();
+        Status status = _stub.camJoin(request).getStatus();
         if (status != Status.OK) {
             throw reactToStatus(status);
         }
     }
 
-    public double[] camInfo(String target, String name) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public double[] camInfo(String name) throws SauronException {
         CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
-        CamInfoResponse response = stub.camInfo(request);
+        CamInfoResponse response = _stub.camInfo(request);
 
         Status status = response.getStatus();
         if (status == Status.OK) {
@@ -47,9 +49,7 @@ public class SiloFrontend {
         }
     }
 
-    public void report(String target, String name, List<List<String>> observations) throws SauronException{
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public void report(String name, List<List<String>> observations) throws SauronException{
         ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
 
         for (List<String> observation : observations){
@@ -59,22 +59,20 @@ public class SiloFrontend {
         }
 
         ReportRequest request = builder.build();
-        ReportResponse response = stub.report(request);
+        ReportResponse response = _stub.report(request);
 
         Status status = response.getStatus();
         if (status != Status.OK)
             throw reactToStatus(status);
     }
 
-    public String track(String target, String type, String id) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public String track(String type, String id) throws SauronException {
         TrackRequest request = TrackRequest.newBuilder()
                 .setType(stringToType(type))
                 .setId(id)
                 .build();
 
-        TrackResponse response = stub.track(request);
+        TrackResponse response = _stub.track(request);
         if (response.getStatus() == Status.OK) {
             return printObservation(response.getObservation());
         } else {
@@ -82,15 +80,13 @@ public class SiloFrontend {
         }
     }
 
-    public List<String> trackMatch(String target, String type, String id) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public List<String> trackMatch(String type, String id) throws SauronException {
         TrackMatchRequest request = TrackMatchRequest.newBuilder()
                 .setType(stringToType(type))
                 .setId(id)
                 .build();
 
-        TrackMatchResponse response = stub.trackMatch(request);
+        TrackMatchResponse response = _stub.trackMatch(request);
         if (response.getStatus() == Status.OK) {
             return response.getObservationsList()
                     .stream()
@@ -102,15 +98,13 @@ public class SiloFrontend {
         }
     }
 
-    public List<String> trace(String target, String type, String id) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public List<String> trace(String type, String id) throws SauronException {
         TrackMatchRequest request = TrackMatchRequest.newBuilder()
                 .setType(stringToType(type))
                 .setId(id)
                 .build();
 
-        TrackMatchResponse response = stub.trackMatch(request);
+        TrackMatchResponse response = _stub.trackMatch(request);
         if (response.getStatus() == Status.OK) {
             return response.getObservationsList().stream()
                     .map(this::printObservation)
@@ -120,12 +114,10 @@ public class SiloFrontend {
         }
     }
 
-    public String ctrlPing(String target, String input) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public String ctrlPing(String input) throws SauronException {
         PingRequest request = PingRequest.newBuilder().setInput(input).build();
 
-        PingResponse response = stub.ctrlPing(request);
+        PingResponse response = _stub.ctrlPing(request);
         if (response.getStatus() == Status.OK) {
             return response.getOutput();
         } else {
@@ -133,17 +125,16 @@ public class SiloFrontend {
         }
     }
 
-    public void ctrlClear(String target) throws SauronException {
-        SauronGrpc.SauronBlockingStub stub = getStub(target);
-
+    public void ctrlClear() throws SauronException {
         ClearRequest request = ClearRequest.getDefaultInstance();
 
-        ClearResponse response = stub.ctrlClear(request);
+        ClearResponse response = _stub.ctrlClear(request);
         if (response.getStatus() != Status.OK)
             throw reactToStatus(response.getStatus());
     }
 
-    public void ctrlInit(String target, String fileName) throws SauronException {
+
+    public void ctrlInit(String fileName) throws SauronException {
         try {
             File file = new File(fileName);
             Scanner scanner = new Scanner(file);
@@ -155,15 +146,15 @@ public class SiloFrontend {
                 StringTokenizer st = new StringTokenizer(line, ",");
                 String type = st.nextToken();
                 if (type.equals("done") && !data.isEmpty() && camName != null) {
-                    report(target, camName, data);
+                    report(camName, data);
                 }
                 if (type.equals("cam")) {
                     if (!data.isEmpty()) {
-                        report(target, camName, data);
+                        report(camName, data);
                         data.clear();
                     }
                     camName = st.nextToken();
-                    camJoin(target, camName, Double.parseDouble(st.nextToken()), Double.parseDouble(st.nextToken()));
+                    camJoin(camName, Double.parseDouble(st.nextToken()), Double.parseDouble(st.nextToken()));
                 }
                 else {
                     List<String> obs = new ArrayList<>();
@@ -191,10 +182,6 @@ public class SiloFrontend {
                 + obs.getCam().getCoordinates().getLongitude();
     }
 
-    private SauronGrpc.SauronBlockingStub getStub(String target) {
-        final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        return  SauronGrpc.newBlockingStub(channel);
-    }
 
     private SauronException reactToStatus(Status status) {
         switch (status) {

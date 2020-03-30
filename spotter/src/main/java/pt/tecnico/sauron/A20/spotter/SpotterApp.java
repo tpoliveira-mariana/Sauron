@@ -10,6 +10,8 @@ import java.util.Scanner;
 
 public class SpotterApp {
 
+	private static SiloFrontend _frontend;
+
 	public static void main(String[] args) {
 		System.out.println(SpotterApp.class.getSimpleName());
 		
@@ -27,14 +29,13 @@ public class SpotterApp {
 
 		final String host = args[0];
 		final int port = Integer.parseInt(args[1]);
-		final String target = host + ":" + port;
+		_frontend = new SiloFrontend(host, Integer.toString(port));
 
-		waitInput(target);
+		waitInput();
 
 	}
 
-	private static void waitInput(String target) {
-		SiloFrontend frontend = new SiloFrontend();
+	private static void waitInput() {
 		System.out.println("Type <help> for usage");
 		try (Scanner scanner = new Scanner(System.in)) {
 			while(scanner.hasNextLine()){
@@ -42,19 +43,19 @@ public class SpotterApp {
 				String[] arguments = command.split(" ");
 				switch(arguments[0]){
 					case "spot":
-						spotCommand(frontend,target, arguments);
+						spotCommand(arguments);
 						break;
 					case "trail":
-						trailCommand(frontend,target, arguments);
+						trailCommand(arguments);
 						break;
 					case "ping":
-						pingCommand(frontend,target, arguments);
+						pingCommand(arguments);
 						break;
 					case "clear":
-						clearCommand(frontend,target, arguments);
+						clearCommand(arguments);
 						break;
 					case "init":
-						initCommand(frontend,target, arguments);
+						initCommand(arguments);
 						break;
 					case "exit":
 						if (arguments.length != 1) {
@@ -78,7 +79,7 @@ public class SpotterApp {
 		}
 	}
 
-	private static void spotCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void spotCommand(String[] arguments) {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true)) {
 			displayCommandUsage("spot");
 			return;
@@ -86,9 +87,9 @@ public class SpotterApp {
 		try {
 			List<String> output = new ArrayList<>();
 			if (!arguments[2].contains("*"))
-				output.add(frontend.track(target, arguments[1], arguments[2]));
+				output.add(_frontend.track(arguments[1], arguments[2]));
 			else
-				output  = frontend.trackMatch(target, arguments[1], arguments[2]);
+				output  = _frontend.trackMatch(arguments[1], arguments[2]);
 			printResult(output);
 			System.out.println("Success!");
 		} catch(SauronException e) {
@@ -97,13 +98,14 @@ public class SpotterApp {
 		}
 	}
 
-	private static void trailCommand(SiloFrontend frontend, String target, String[] arguments) {
+
+	private static void trailCommand(String[] arguments) {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false)) {
 			displayCommandUsage("trail");
 			return;
 		}
 		try {
-			List<String> output  = frontend.trace(target, arguments[1], arguments[2]);
+			List<String> output  = _frontend.trace(arguments[1], arguments[2]);
 			printResult(output);
 			System.out.println("Success!");
 		} catch(SauronException e){
@@ -112,13 +114,13 @@ public class SpotterApp {
 		}
 	}
 
-	private static void pingCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void pingCommand(String[] arguments) {
 		if (arguments.length != 1) {
 			displayCommandUsage("ping");
 			return;
 		}
 		try {
-			String response = frontend.ctrlPing(target, "spotter!");
+			String response = _frontend.ctrlPing("spotter!");
 			System.out.println(response);
 		} catch(SauronException e){
 			System.out.println("Invalid usage of ping - " + reactToException(e));
@@ -126,13 +128,13 @@ public class SpotterApp {
 		}
 	}
 
-	private static void clearCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void clearCommand(String[] arguments) {
 		if (arguments.length != 1) {
 			displayCommandUsage("clear");
 			return;
 		}
 		try {
-			frontend.ctrlClear(target);
+			_frontend.ctrlClear();
 			System.out.println("Success!");
 		} catch(SauronException e){
 			System.out.println("Invalid usage of clear - " + reactToException(e));
@@ -140,14 +142,14 @@ public class SpotterApp {
 		}
 	}
 
-	private static void initCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void initCommand(String[] arguments) {
 		if (arguments.length != 2) {
 			displayCommandUsage("init");
 			return;
 		}
 		String filePath =  System.getProperty("user.dir") + "/" + arguments[1];
 		try{
-			frontend.ctrlInit(target, filePath);
+			_frontend.ctrlInit(filePath);
 			System.out.println("Success!");
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trail - " + reactToException(e));
