@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Scanner;
 
 public class SpotterApp {
-	private static String PERSON = "person";
-	private static String CAR = "car";
 
 	public static void main(String[] args) {
 		System.out.println(SpotterApp.class.getSimpleName());
@@ -81,15 +79,18 @@ public class SpotterApp {
 	}
 
 	private static void spotCommand(SiloFrontend frontend, String target, String[] arguments) {
-		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
+		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true)) {
 			displayCommandUsage("spot");
+			return;
+		}
 		try {
 			List<String> output = new ArrayList<>();
 			if (!arguments[2].contains("*"))
-				output.add(frontend.track(target, arguments[0], arguments[1]));
+				output.add(frontend.track(target, arguments[1], arguments[2]));
 			else
-				output  = frontend.trackMatch(target, arguments[0], arguments[1]);
+				output  = frontend.trackMatch(target, arguments[1], arguments[2]);
 			printResult(output);
+			System.out.println("Success!");
 		} catch(SauronException e) {
 			System.out.println("Invalid usage of spot - " + reactToException(e));
 			displayCommandUsage("spot");
@@ -97,11 +98,14 @@ public class SpotterApp {
 	}
 
 	private static void trailCommand(SiloFrontend frontend, String target, String[] arguments) {
-		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
+		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false)) {
 			displayCommandUsage("trail");
+			return;
+		}
 		try {
-			List<String> output  = frontend.trace(target, arguments[0], arguments[1]);
+			List<String> output  = frontend.trace(target, arguments[1], arguments[2]);
 			printResult(output);
+			System.out.println("Success!");
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trail - " + reactToException(e));
 			displayCommandUsage("trail");
@@ -109,25 +113,42 @@ public class SpotterApp {
 	}
 
 	private static void pingCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO- catch exceptions and create ping
-		if (arguments.length != 1)
+		if (arguments.length != 1) {
 			displayCommandUsage("ping");
-		//frontend.ping(target);
+			return;
+		}
+		try {
+			String response = frontend.ctrlPing(target, "spotter!");
+			System.out.println(response);
+		} catch(SauronException e){
+			System.out.println("Invalid usage of ping - " + reactToException(e));
+			displayCommandUsage("ping");
+		}
 	}
 
 	private static void clearCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO- catch exceptions and create clear
-		if (arguments.length != 1)
+		if (arguments.length != 1) {
 			displayCommandUsage("clear");
-		//frontend.clear(target);
+			return;
+		}
+		try {
+			frontend.ctrlClear(target);
+			System.out.println("Success!");
+		} catch(SauronException e){
+			System.out.println("Invalid usage of clear - " + reactToException(e));
+			displayCommandUsage("clear");
+		}
 	}
 
 	private static void initCommand(SiloFrontend frontend, String target, String[] arguments) {
-		if (arguments.length != 2)
+		if (arguments.length != 2) {
 			displayCommandUsage("init");
+			return;
+		}
 		String filePath =  System.getProperty("user.dir") + "/" + arguments[1];
 		try{
-			frontend.ctrl_init(target, filePath);
+			frontend.ctrlInit(target, filePath);
+			System.out.println("Success!");
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trail - " + reactToException(e));
 			displayCommandUsage("init");
@@ -155,6 +176,8 @@ public class SpotterApp {
 	}
 
 	private static boolean checkObjectArguments(String type, String id, boolean regex) {
+		String PERSON = "person";
+		String CAR = "car";
 		if (!type.equals(CAR)  && !type.equals(PERSON)) {
 			System.out.println("Invalid object type provided.");
 			return false;
@@ -220,6 +243,8 @@ public class SpotterApp {
 				return "Invalid type given";
 			case ERROR_PROCESSING_FILE:
 				return "Error processing the file";
+			case INVALID_ARGUMENT:
+				return "Invalid argument";
 			default:
 				return "An error occurred";
 		}

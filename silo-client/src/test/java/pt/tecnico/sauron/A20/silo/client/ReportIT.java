@@ -27,7 +27,7 @@ public class ReportIT extends BaseIT {
     @BeforeAll
     public static void oneTimeSetUp() {
         try {
-            frontend.ctrl_init(TARGET, TEST_DATA_FILE);
+            frontend.ctrlInit(TARGET, TEST_DATA_FILE);
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());

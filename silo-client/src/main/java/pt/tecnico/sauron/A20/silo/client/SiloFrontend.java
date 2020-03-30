@@ -143,7 +143,7 @@ public class SiloFrontend {
             throw reactToStatus(response.getStatus());
     }
 
-    public void ctrl_init(String target, String fileName) throws SauronException {
+    public void ctrlInit(String target, String fileName) throws SauronException {
         try {
             File file = new File(fileName);
             Scanner scanner = new Scanner(file);
@@ -185,7 +185,7 @@ public class SiloFrontend {
         String ts = Timestamps.toString(obs.getTimestamp());
         return typeToString(obs.getObject().getType()) + ", "
                 + obs.getObject().getId() + ", "
-                + ts.substring(0, ts.lastIndexOf('.')) + ", "
+                + ts + ", "
                 + obs.getCam().getName() + ", "
                 + obs.getCam().getCoordinates().getLatitude() + ", "
                 + obs.getCam().getCoordinates().getLongitude();
