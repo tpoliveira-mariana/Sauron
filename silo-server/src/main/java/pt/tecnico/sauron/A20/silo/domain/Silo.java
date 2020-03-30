@@ -1,9 +1,9 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
 import pt.tecnico.sauron.A20.exceptions.*;
-import pt.tecnico.sauron.A20.silo.grpc.Observation;
-import pt.tecnico.sauron.A20.silo.grpc.Status;
 
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 
@@ -74,5 +74,49 @@ public class Silo {
             default:
                 throw new SauronException(TYPE_DOES_NOT_EXIST);
         }
+    }
+
+    public SauronObservation track(String type, String id) throws SauronException {
+        SauronObject object = createNewObject(type, id);
+        List<SauronObservation> sauObs = _objs.get(object);
+        if (sauObs == null)
+            throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
+
+        return sauObs.get(sauObs.size()-1);
+    }
+
+    public List<SauronObservation> trackMatch(String type, String parcId) throws SauronException {
+        String regex = buildRegex(parcId);
+        return _objs.keySet()
+                .stream()
+                .filter(obj -> obj.getId().matches(regex) && obj.getType().equals(type))
+                .map(obj -> _objs.get(obj).get(_objs.get(obj).size()-1))
+                .collect(Collectors.toList());
+    }
+
+    public List<SauronObservation> trace(String type, String id) throws SauronException {
+        SauronObject object = createNewObject(type, id);
+        List<SauronObservation> sauObs = _objs.get(object);
+        if (sauObs == null)
+            throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
+
+        return sauObs.stream()
+                .sorted(Collections.reverseOrder())
+                .collect(Collectors.toList());
+    }
+
+    private String buildRegex(String parcId) throws SauronException {
+        StringBuilder builder = new StringBuilder();
+        for (int i=0; i < parcId.length(); i++) {
+            char c = parcId.charAt(i);
+            if (c == '*')
+                builder.append(".*");
+            else if (Character.isLetterOrDigit(c))
+                builder.append(c);
+            else {
+                throw new SauronException(ErrorMessage.INVALID_ID);
+            }
+        }
+        return builder.toString();
     }
 }

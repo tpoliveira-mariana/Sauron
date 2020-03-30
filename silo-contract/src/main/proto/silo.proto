@@ -16,6 +16,7 @@ enum Status {
     INVALID_TYPE = 5;
     DUPLICATE_CAMERA = 6;
     DUPLICATE_CAM_NAME = 7;
+    OBJECT_NOT_FOUND = 8;
 }
 
 enum ObjectType {
@@ -28,10 +29,16 @@ message Coordinates {
     double longitude = 2;
 }
 
+message Cam {
+    string name = 1;
+    Coordinates coordinates = 2;
+}
+
 message Observation {
     ObjectType type = 1;
     string id = 2;
     google.protobuf.Timestamp timestamp = 3;
+    Cam cam = 4;
 }
 
 

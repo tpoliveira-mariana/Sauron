@@ -4,7 +4,10 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
+
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 
@@ -20,7 +23,7 @@ public class SiloFrontend {
 
         Status status = stub.camJoin(request).getStatus();
         if (status != Status.OK) {
-            reactToStatus(status);
+            throw reactToStatus(status);
         }
     }
 
@@ -35,12 +38,8 @@ public class SiloFrontend {
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
         else {
-            reactToStatus(status);
-            return null;
+            throw reactToStatus(status);
         }
-
-
-
     }
 
     public void report(String target, String name, List<List<String>> observations) throws SauronException{
@@ -49,7 +48,7 @@ public class SiloFrontend {
         ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
 
         for (List<String> observation : observations){
-            ObjectType type = getObjectType(observation.get(0));
+            ObjectType type = stringToType(observation.get(0));
             Observation builderObs = Observation.newBuilder().setType(type).setId(observation.get(1)).build();
             builder.addObservations(builderObs);
         }
@@ -59,20 +58,70 @@ public class SiloFrontend {
 
         Status status = response.getStatus();
         if (status != Status.OK)
-            reactToStatus(status);
-
+            throw reactToStatus(status);
     }
 
-    public void track(String target, String type, String id) throws SauronException {
-        System.out.println("Track");
+    public String track(String target, String type, String id) throws SauronException {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        TrackRequest request = TrackRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+
+        TrackResponse response = stub.track(request);
+        if (response.getStatus() == Status.OK) {
+            return printObservation(response.getObservation());
+        } else {
+            throw reactToStatus(response.getStatus());
+        }
     }
 
-    public void trackMatch(String target, String type, String id) throws SauronException {
-        System.out.println("TrackMatch");
+    public List<String> trackMatch(String target, String type, String id) throws SauronException {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        TrackMatchRequest request = TrackMatchRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+
+        TrackMatchResponse response = stub.trackMatch(request);
+        if (response.getStatus() == Status.OK) {
+            return response.getObservationsList()
+                    .stream()
+                    .sorted(Comparator.comparing(Observation::getId))
+                    .map(this::printObservation)
+                    .collect(Collectors.toList());
+        } else {
+            throw reactToStatus(response.getStatus());
+        }
     }
 
-    public void trace(String target, String type, String id) throws SauronException {
-        System.out.println("Trace");
+    public List<String> trace(String target, String type, String id) throws SauronException {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        TrackMatchRequest request = TrackMatchRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+
+        TrackMatchResponse response = stub.trackMatch(request);
+        if (response.getStatus() == Status.OK) {
+            return response.getObservationsList().stream()
+                    .map(this::printObservation)
+                    .collect(Collectors.toList());
+        } else {
+            throw reactToStatus(response.getStatus());
+        }
+    }
+
+    private String printObservation(Observation obs) {
+        return typeToString(obs.getType()) + ", "
+                + obs.getId()+", "
+                + obs.getTimestamp()+", "
+                + obs.getCam().getName()+", "
+                + obs.getCam().getCoordinates().getLatitude()+", "
+                + obs.getCam().getCoordinates().getLongitude();
     }
 
     private SauronGrpc.SauronBlockingStub getStub(String target) {
@@ -80,29 +129,31 @@ public class SiloFrontend {
         return  SauronGrpc.newBlockingStub(channel);
     }
 
-    private void reactToStatus(Status status) throws SauronException {
+    private SauronException reactToStatus(Status status) {
         switch (status) {
             case DUPLICATE_CAMERA:
-                throw new SauronException(DUPLICATE_CAMERA);
+                return new SauronException(DUPLICATE_CAMERA);
             case DUPLICATE_CAM_NAME:
-                throw new SauronException(DUPLICATE_CAM_NAME);
+                return new SauronException(DUPLICATE_CAM_NAME);
 
             case INVALID_NAME:
             case INEXISTENT_CAMERA:
-                throw new SauronException(INVALID_CAM_NAME);
+                return new SauronException(INVALID_CAM_NAME);
 
             case INVALID_COORDINATES:
-                throw new SauronException(INVALID_COORDINATES);
+                return new SauronException(INVALID_COORDINATES);
             case INVALID_ID:
-                throw new SauronException(INVALID_ID);
+                return new SauronException(INVALID_ID);
             case INVALID_TYPE:
-                throw new SauronException(TYPE_DOES_NOT_EXIST);
+                return new SauronException(TYPE_DOES_NOT_EXIST);
+            case OBJECT_NOT_FOUND:
+                return new SauronException(OBJECT_NOT_FOUND);
             default:
-                //TODO throw exception
+                return new SauronException(UNKNOWN);
         }
     }
 
-    private ObjectType getObjectType(String type) throws SauronException{
+    private ObjectType stringToType(String type) throws SauronException {
         switch (type){
             case "person":
                 return ObjectType.PERSON;
@@ -113,4 +164,14 @@ public class SiloFrontend {
         }
     }
 
+    private String typeToString(ObjectType type) {
+        switch (type){
+            case PERSON:
+                return "person";
+            case CAR:
+                return "car";
+            default:
+                return null;
+        }
+    }
 }

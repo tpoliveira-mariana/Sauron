@@ -1,6 +1,7 @@
 package pt.tecnico.sauron.A20.exceptions;
 
 public enum ErrorMessage {
+    UNKNOWN("An unknown exception occurred."),
     DUPLICATE_CAMERA("Camera already exists."),
     DUPLICATE_CAM_NAME("Camera name already in use."),
     INVALID_COORDINATES("Invalid coordinates provided."),
@@ -9,7 +10,8 @@ public enum ErrorMessage {
     INVALID_PERSON_IDENTIFIER("Invalid person identifier provided."),
     CAMERA_NOT_FOUND("Camera not found."),
     TYPE_DOES_NOT_EXIST("The type does not exist."),
-    INVALID_ID("Invalid identifier provided.");
+    INVALID_ID("Invalid identifier provided."),
+    OBJECT_NOT_FOUND("The requested Sauron Object was not found.");
 
     public final String label;
 

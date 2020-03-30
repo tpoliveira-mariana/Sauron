@@ -31,6 +31,10 @@ public class SauronObservation {
         return _obj.getType();
     }
 
+    public SauronCamera getCamera() {
+        return _cam;
+    }
+
     public String getTimeStamp() {
         return _ts;
     }

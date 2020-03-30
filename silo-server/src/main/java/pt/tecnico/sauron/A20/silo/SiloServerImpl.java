@@ -1,7 +1,9 @@
 package pt.tecnico.sauron.A20.silo;
 
 
+import com.google.protobuf.Timestamp;
 import io.grpc.stub.StreamObserver;
+import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.silo.domain.*;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
@@ -11,6 +13,7 @@ import pt.tecnico.sauron.A20.silo.grpc.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.TYPE_DOES_NOT_EXIST;
 
@@ -117,17 +120,83 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
     @Override
     public void track(TrackRequest request, StreamObserver<TrackResponse> responseObserver) {
+        TrackResponse.Builder builder = TrackResponse.newBuilder();
+        try {
+            SauronObservation sauObs = silo.track(getObjectType(request.getType()), request.getId());
 
+            builder.setObservation(buildObs(sauObs)).setStatus(Status.OK);
+
+        } catch (SauronException e) {
+            if (e.getErrorMessage().equals(ErrorMessage.OBJECT_NOT_FOUND))
+                builder.setStatus(Status.OBJECT_NOT_FOUND);
+            else
+                builder.setStatus(Status.UNRECOGNIZED);
+        }
+
+        TrackResponse response = builder.build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void trackMatch(TrackMatchRequest request, StreamObserver<TrackMatchResponse> responseObserver) {
+        TrackMatchResponse.Builder builder = TrackMatchResponse.newBuilder();
 
+        try {
+            List<SauronObservation> sauObs = silo.trackMatch(getObjectType(request.getType()), request.getId());
+
+            if (sauObs.isEmpty())
+                builder.setStatus(Status.OBJECT_NOT_FOUND);
+            else
+                builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()))
+                        .setStatus(Status.OK);
+        } catch (SauronException e) {
+            if (e.getErrorMessage().equals(ErrorMessage.INVALID_ID))
+                builder.setStatus(Status.INVALID_ID);
+            else
+                builder.setStatus(Status.UNRECOGNIZED);
+        }
+
+        TrackMatchResponse response = builder.build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void trace(TraceRequest request, StreamObserver<TraceResponse> responseObserver) {
+        TraceResponse.Builder builder = TraceResponse.newBuilder();
 
+        try {
+            List<SauronObservation> sauObs = silo.trace(getObjectType(request.getType()), request.getId());
+
+            builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()))
+                    .setStatus(Status.OK);
+
+        } catch (SauronException e) {
+            if (e.getErrorMessage().equals(ErrorMessage.OBJECT_NOT_FOUND))
+                builder.setStatus(Status.OBJECT_NOT_FOUND);
+            else
+                builder.setStatus(Status.UNRECOGNIZED);
+        }
+
+        TraceResponse response = builder.build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    private Observation buildObs(SauronObservation sauObs) {
+        ObjectType type = sauObs.getObjectType().equals("car") ? ObjectType.CAR : ObjectType.PERSON;
+        Timestamp ts = Timestamp.newBuilder().build();
+
+        Cam cam = Cam.newBuilder()
+                    .setName(sauObs.getCamera().getName())
+                    .setCoordinates(Coordinates.newBuilder()
+                            .setLongitude(sauObs.getCamera().getLongitude())
+                            .setLatitude(sauObs.getCamera().getLatitude())
+                            .build())
+                    .build();
+
+        return Observation.newBuilder().setId(sauObs.getObjectId()).setType(type).setTimestamp(ts).setCam(cam).build();
     }
 
     private String getObjectType(ObjectType type) throws SauronException{
