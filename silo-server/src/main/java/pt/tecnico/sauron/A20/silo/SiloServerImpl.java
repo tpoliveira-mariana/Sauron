@@ -11,6 +11,7 @@ import pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
+import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -68,14 +69,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         } catch(SauronException e) {
             cam = null;
         }
-        List<Observation> observations = request.getObservationsList();
+        List<Object> objects = request.getObjectList();
         builder.setStatus(cam == null ? Status.INEXISTENT_CAMERA : Status.OK);
-        for(Observation obs: observations) {
+        for(Object obj: objects) {
             if (cam == null) break;
 
             try {
-                SauronObject obj = silo.getObjectByTypeAndId(getObjectType(obs.getType()), obs.getId());
-                SauronObservation observation = new SauronObservation(obj, cam, LocalDateTime.now());
+                SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
+                SauronObservation observation = new SauronObservation(sauObj, cam, LocalDateTime.now());
                 silo.addObservation(observation);
             }
             catch(SauronException e) {
@@ -154,15 +155,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             ts = Timestamp.getDefaultInstance();
         }
 
-        Cam cam = Cam.newBuilder()
-                    .setName(sauObs.getCamera().getName())
-                    .setCoordinates(Coordinates.newBuilder()
-                            .setLongitude(sauObs.getCamera().getLongitude())
-                            .setLatitude(sauObs.getCamera().getLatitude())
-                            .build())
-                    .build();
+        Object object = Object.newBuilder().setType(type).setId(sauObs.getObjectId()).build();
+        Coordinates coords = Coordinates.newBuilder()
+                                .setLongitude(sauObs.getCamera().getLongitude())
+                                .setLatitude(sauObs.getCamera().getLatitude()).build();
+        Cam cam = Cam.newBuilder().setName(sauObs.getCamera().getName()).setCoordinates(coords).build();
 
-        return Observation.newBuilder().setId(sauObs.getObjectId()).setType(type).setTimestamp(ts).setCam(cam).build();
+        return Observation.newBuilder().setObject(object).setCam(cam).setTimestamp(ts).build();
     }
 
     private String getObjectType(ObjectType type) throws SauronException{

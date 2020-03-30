@@ -6,6 +6,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
+import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,12 +50,11 @@ public class SiloFrontend {
         SauronGrpc.SauronBlockingStub stub = getStub(target);
 
         ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
-        Cam cam = Cam.newBuilder().setName(name).build();
 
         for (List<String> observation : observations){
             ObjectType type = stringToType(observation.get(0));
-            Observation builderObs = Observation.newBuilder().setCam(cam).setType(type).setId(observation.get(1)).build();
-            builder.addObservations(builderObs);
+            Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
+            builder.addObject(builderObj);
         }
 
         ReportRequest request = builder.build();
@@ -93,7 +93,7 @@ public class SiloFrontend {
         if (response.getStatus() == Status.OK) {
             return response.getObservationsList()
                     .stream()
-                    .sorted(Comparator.comparing(Observation::getId))
+                    .sorted(Comparator.comparing(obs -> obs.getObject().getId()))
                     .map(this::printObservation)
                     .collect(Collectors.toList());
         } else {
@@ -121,8 +121,8 @@ public class SiloFrontend {
 
     private String printObservation(Observation obs) {
         String ts = Timestamps.toString(obs.getTimestamp());
-        return typeToString(obs.getType()) + ", "
-                + obs.getId() + ", "
+        return typeToString(obs.getObject().getType()) + ", "
+                + obs.getObject().getId() + ", "
                 + ts.substring(0, ts.lastIndexOf('.')) + ", "
                 + obs.getCam().getName() + ", "
                 + obs.getCam().getCoordinates().getLatitude() + ", "
