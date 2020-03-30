@@ -11,7 +11,7 @@ import java.util.Scanner;
 public class SpotterApp {
 	private static String PERSON = "person";
 	private static String CAR = "car";
-	
+
 	public static void main(String[] args) {
 		System.out.println(SpotterApp.class.getSimpleName());
 		
@@ -40,49 +40,49 @@ public class SpotterApp {
 		System.out.println("Type <help> for usage");
 		try (Scanner scanner = new Scanner(System.in)) {
 			while(scanner.hasNextLine()){
-				boolean status;
 				String command = scanner.nextLine();
 				String[] arguments = command.split(" ");
 				switch(arguments[0]){
 					case "spot":
-						status = spotCommand(frontend,target, arguments);
+						spotCommand(frontend,target, arguments);
 						break;
 					case "trail":
-						status = trailCommand(frontend,target, arguments);
+						trailCommand(frontend,target, arguments);
 						break;
 					case "ping":
-						status = pingCommand(frontend,target, arguments);
+						pingCommand(frontend,target, arguments);
 						break;
 					case "clear":
-						status = clearCommand(frontend,target, arguments);
+						clearCommand(frontend,target, arguments);
 						break;
 					case "init":
-						status = initCommand(frontend,target, arguments);
+						initCommand(frontend,target, arguments);
 						break;
 					case "exit":
 						if (arguments.length != 1) {
-							status = false;
+							displayCommandUsage("exit");
 							break;
 						}
 						System.out.println("Exiting!");
 						return;
 					case "help":
-						status = displayHelp();
+						if (arguments.length != 1) {
+							displayCommandUsage("help");
+							break;
+						}
+						displayHelp();
 						break;
 					default:
-						System.out.println("Invalid Usage!");
-						status = displayHelp();
+						System.out.println("Invalid Command! Type <help> to display available commands");
 						break;
 				}
-				if (!status)
-					System.out.println("Invalid Usage!");
 			}
 		}
 	}
 
-	private static boolean spotCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void spotCommand(SiloFrontend frontend, String target, String[] arguments) {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
-			return false;
+			displayCommandUsage("spot");
 		try {
 			List<String> output = new ArrayList<>();
 			if (!arguments[2].contains("*"))
@@ -92,49 +92,49 @@ public class SpotterApp {
 			printResult(output);
 		} catch(SauronException e) {
 			System.out.println("Invalid usage of spot - " + reactToException(e));
-			System.out.println("\tUsage: spot <ObjectType> <ObjectId>");
+			displayCommandUsage("spot");
 		}
-		return true;
 	}
 
-	private static boolean trailCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void trailCommand(SiloFrontend frontend, String target, String[] arguments) {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
-			return false;
+			displayCommandUsage("trail");
 		try {
 			List<String> output  = frontend.trace(target, arguments[0], arguments[1]);
 			printResult(output);
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trail - " + reactToException(e));
-			System.out.println("\tUsage: trail <ObjectType> <ObjectId>");
+			displayCommandUsage("trail");
 		}
-		return true;
 	}
 
-	private static boolean pingCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void pingCommand(SiloFrontend frontend, String target, String[] arguments) {
 		//TODO- catch exceptions and create ping
 		if (arguments.length != 1)
-			return false;
+			displayCommandUsage("ping");
 		//frontend.ping(target);
-		return true;
 	}
 
-	private static boolean clearCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static void clearCommand(SiloFrontend frontend, String target, String[] arguments) {
 		//TODO- catch exceptions and create clear
 		if (arguments.length != 1)
-			return false;
+			displayCommandUsage("clear");
 		//frontend.clear(target);
-		return true;
 	}
 
-	private static boolean initCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO-Call frontend and create init
+	private static void initCommand(SiloFrontend frontend, String target, String[] arguments) {
 		if (arguments.length != 2)
-			return false;
-		//frontend.init(target, System.getProperty("user.dir")) + "/" + arguments[1]);
-		return true;
+			displayCommandUsage("init");
+		String filePath =  System.getProperty("user.dir") + "/" + arguments[1];
+		try{
+			frontend.ctrl_init(target, filePath);
+		} catch(SauronException e){
+			System.out.println("Invalid usage of trail - " + reactToException(e));
+			displayCommandUsage("init");
+		}
 	}
 
-	private static boolean displayHelp() {
+	private static void displayHelp() {
 		System.out.println("\t\t-=+=-");
 		System.out.println("spot  - gets the last observation of the object of type <type> and id <id>");
 		System.out.println("      - id can contain * meaning any match, for example 1*2 means any number starting with 1 and ending with 2");
@@ -145,14 +145,13 @@ public class SpotterApp {
 		System.out.println("\tUsage: ping");
 		System.out.println("clear - clears the server");
 		System.out.println("\tUsage: clear");
-		System.out.println("init  - parameters to start the server");
-		System.out.println("\tUsage: init");
+		System.out.println("init  - import parameters to start the server from a file");
+		System.out.println("\tUsage: init <filename>");
 		System.out.println("exit  - leaves the program");
 		System.out.println("\tUsage: exit");
 		System.out.println("help  - show program usage");
 		System.out.println("\tUsage: help");
 		System.out.println("\t\t-=+=-");
-		return true;
 	}
 
 	private static boolean checkObjectArguments(String type, String id, boolean regex) {
@@ -208,7 +207,7 @@ public class SpotterApp {
 	}
 
 	private static void printResult(List<String> output) {
-		output.forEach(line -> System.out.println(line));
+		output.forEach(System.out::println);
 	}
 
 	private static String reactToException(SauronException e) {
@@ -219,8 +218,35 @@ public class SpotterApp {
 				return "Invalid ID given";
 			case TYPE_DOES_NOT_EXIST:
 				return "Invalid type given";
+			case ERROR_PROCESSING_FILE:
+				return "Error processing the file";
 			default:
 				return "An error occurred";
+		}
+	}
+
+	private static void displayCommandUsage(String command) {
+		switch (command){
+			case "spot":
+				System.out.println("Usage: spot <ObjectType> <ObjectId>");
+				break;
+			case "trail":
+				System.out.println("Usage: trail <ObjectType> <ObjectId>");
+				break;
+			case "ping":
+				System.out.println("Usage: ping");
+				break;
+			case "clear":
+				System.out.println("Usage: clear");
+				break;
+			case "init":
+				System.out.println("Usage: init <filename>");
+				break;
+			case "exit":
+				System.out.println("Usage: exit");
+				break;
+			case "help":
+				System.out.println("Usage: help");
 		}
 	}
 
