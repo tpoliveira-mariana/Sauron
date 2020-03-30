@@ -59,7 +59,6 @@ public class TraceIT extends BaseIT {
             Assertions.assertTrue(result.size() == 3);
             int i = 0;
             for (String r : result) {
-                System.out.println(r);
                 StringTokenizer st = new StringTokenizer(r, ",");
                 Assertions.assertEquals(6, st.countTokens());
                 Assertions.assertEquals("person", st.nextToken());
