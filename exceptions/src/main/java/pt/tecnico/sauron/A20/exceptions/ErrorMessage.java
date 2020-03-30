@@ -11,7 +11,8 @@ public enum ErrorMessage {
     CAMERA_NOT_FOUND("Camera not found."),
     TYPE_DOES_NOT_EXIST("The type does not exist."),
     INVALID_ID("Invalid identifier provided."),
-    OBJECT_NOT_FOUND("The requested Sauron Object was not found.");
+    OBJECT_NOT_FOUND("The requested Sauron Object was not found."),
+    ERROR_PROCESSING_FILE("Error processing provided file.");
 
     public final String label;
 

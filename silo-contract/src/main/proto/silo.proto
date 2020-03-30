@@ -34,11 +34,15 @@ message Cam {
     Coordinates coordinates = 2;
 }
 
-message Observation {
+message Object {
     ObjectType type = 1;
     string id = 2;
+}
+
+message Observation {
+    Object object = 1;
+    Cam cam = 2;
     google.protobuf.Timestamp timestamp = 3;
-    Cam cam = 4;
 }
 
 
@@ -62,7 +66,7 @@ message CamInfoResponse {
 
 message ReportRequest {
     string name = 1;
-    repeated Observation observations = 2;
+    repeated Object object = 2;
 }
 
 message ReportResponse {
