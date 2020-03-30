@@ -1,0 +1,6 @@
+cam,Tagus,12,-36
+car,AAAA11
+person,1
+cam,Alameda,13,-36.5
+car,AAAA11
+done
