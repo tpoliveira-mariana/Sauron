@@ -180,7 +180,7 @@ public class SiloFrontend {
         String ts = Timestamps.toString(obs.getTimestamp());
         return typeToString(obs.getObject().getType()) + ", "
                 + obs.getObject().getId() + ", "
-                + ts + ", "
+                + ts.substring(0, ts.lastIndexOf('.')) + ", "
                 + obs.getCam().getName() + ", "
                 + obs.getCam().getCoordinates().getLatitude() + ", "
                 + obs.getCam().getCoordinates().getLongitude();

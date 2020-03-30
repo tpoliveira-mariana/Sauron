@@ -7,18 +7,16 @@ import io.grpc.stub.StreamObserver;
 import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.silo.domain.*;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
-import pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.text.ParseException;
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.TYPE_DOES_NOT_EXIST;
 
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
@@ -76,7 +74,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
             try {
                 SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
-                SauronObservation observation = new SauronObservation(sauObj, cam, LocalDateTime.now());
+                SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
                 silo.addObservation(observation);
             }
             catch(SauronException e) {
@@ -196,7 +194,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             case CAR:
                 return "car";
             default:
-                throw new SauronException(TYPE_DOES_NOT_EXIST);
+                throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
         }
     }
 

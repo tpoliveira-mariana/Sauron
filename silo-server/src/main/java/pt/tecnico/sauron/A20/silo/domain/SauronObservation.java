@@ -1,22 +1,21 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class SauronObservation {
 
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
     private SauronObject _obj;
     private SauronCamera _cam;
     private String _ts;
 
 
-    public SauronObservation(SauronObject obj, SauronCamera cam, LocalDateTime ts) {
+    public SauronObservation(SauronObject obj, SauronCamera cam, ZonedDateTime ts) {
         setObject(obj);
         setCamera(cam);
         setTimeStamp(ts.format(formatter));
-
     }
 
     public SauronObject getObject() {
