@@ -12,7 +12,7 @@ public class ReportIT extends BaseIT {
     private static final String TEST_DATA_FILE = "./src/test/reportIT_data.txt";
     private static SiloFrontend frontend;
     private static final String HOST = "localhost";
-    private static final String PORT = "8000";
+    private static final String PORT = "8080";
     private static final String CAM_NAME_1 = "Tagus";
     private static final String INEXISTENT_CAM_NAME = "Test";
     private static final String PERSON_ID_1 = "1";

@@ -1,0 +1,12 @@
+cam,Tagus,12,-36
+person,1
+person,2
+person,3
+cam,Alameda,13,-36.5
+person,2
+person,3
+person,1
+person,5
+cam,FCT,26,-39.567
+person,1
+done
