@@ -1,5 +1,7 @@
 package pt.tecnico.sauron.A20.silo.client;
 
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
@@ -116,11 +118,12 @@ public class SiloFrontend {
     }
 
     private String printObservation(Observation obs) {
+        String ts = Timestamps.toString(obs.getTimestamp());
         return typeToString(obs.getType()) + ", "
-                + obs.getId()+", "
-                + obs.getTimestamp()+", "
-                + obs.getCam().getName()+", "
-                + obs.getCam().getCoordinates().getLatitude()+", "
+                + obs.getId() + ", "
+                + ts.substring(0, ts.lastIndexOf('.')) + ", "
+                + obs.getCam().getName() + ", "
+                + obs.getCam().getCoordinates().getLatitude() + ", "
                 + obs.getCam().getCoordinates().getLongitude();
     }
 

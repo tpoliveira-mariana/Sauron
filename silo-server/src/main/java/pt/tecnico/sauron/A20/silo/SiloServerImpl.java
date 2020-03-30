@@ -2,6 +2,7 @@ package pt.tecnico.sauron.A20.silo;
 
 
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import io.grpc.stub.StreamObserver;
 import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.silo.domain.*;
@@ -11,6 +12,7 @@ import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 
+import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -186,7 +188,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
     private Observation buildObs(SauronObservation sauObs) {
         ObjectType type = sauObs.getObjectType().equals("car") ? ObjectType.CAR : ObjectType.PERSON;
-        Timestamp ts = Timestamp.newBuilder().build();
+        Timestamp ts;
+        try {
+            ts = Timestamps.parse(sauObs.getTimeStamp());
+        } catch (ParseException e) {
+            ts = Timestamp.getDefaultInstance();
+        }
 
         Cam cam = Cam.newBuilder()
                     .setName(sauObs.getCamera().getName())
