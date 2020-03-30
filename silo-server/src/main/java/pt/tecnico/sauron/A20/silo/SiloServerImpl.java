@@ -146,6 +146,31 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void ctrlPing(PingRequest request, StreamObserver<PingResponse> responseObserver) {
+        PingResponse.Builder builder = PingResponse.newBuilder();
+        String input = request.getInput();
+        if (input == null || input.isBlank()) {
+            builder.setStatus(Status.INVALID_ARGUMENT);
+        } else {
+            String output = "Hello " + request.getInput() + "!";
+            builder.setOutput(output).setStatus(Status.OK);
+        }
+
+        PingResponse response = builder.build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void ctrlClear(ClearRequest request, StreamObserver<ClearResponse> responseObserver) {
+        silo.clear();
+
+        ClearResponse response = ClearResponse.newBuilder().setStatus(Status.OK).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
     private Observation buildObs(SauronObservation sauObs) {
         ObjectType type = sauObs.getObjectType().equals("car") ? ObjectType.CAR : ObjectType.PERSON;
         Timestamp ts;

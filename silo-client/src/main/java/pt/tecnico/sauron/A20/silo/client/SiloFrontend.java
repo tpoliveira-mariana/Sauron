@@ -120,6 +120,29 @@ public class SiloFrontend {
         }
     }
 
+    public String ctrlPing(String target, String input) throws SauronException {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        PingRequest request = PingRequest.newBuilder().setInput(input).build();
+
+        PingResponse response = stub.ctrlPing(request);
+        if (response.getStatus() == Status.OK) {
+            return response.getOutput();
+        } else {
+            throw reactToStatus(response.getStatus());
+        }
+    }
+
+    public void ctrlClear(String target) throws SauronException {
+        SauronGrpc.SauronBlockingStub stub = getStub(target);
+
+        ClearRequest request = ClearRequest.getDefaultInstance();
+
+        ClearResponse response = stub.ctrlClear(request);
+        if (response.getStatus() != Status.OK)
+            throw reactToStatus(response.getStatus());
+    }
+
     public void ctrl_init(String target, String fileName) throws SauronException {
         try {
             File file = new File(fileName);
@@ -192,6 +215,8 @@ public class SiloFrontend {
                 return new SauronException(TYPE_DOES_NOT_EXIST);
             case OBJECT_NOT_FOUND:
                 return new SauronException(OBJECT_NOT_FOUND);
+            case INVALID_ARGUMENT:
+                return new SauronException(INVALID_ARGUMENT);
             default:
                 return new SauronException(UNKNOWN);
         }
