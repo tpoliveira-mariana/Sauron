@@ -42,7 +42,7 @@ public class SpotterApp {
 			while(scanner.hasNextLine()){
 				boolean status;
 				String command = scanner.nextLine();
-				String arguments[] = command.split(" ");
+				String[] arguments = command.split(" ");
 				switch(arguments[0]){
 					case "spot":
 						status = spotCommand(frontend,target, arguments);
@@ -81,7 +81,6 @@ public class SpotterApp {
 	}
 
 	private static boolean spotCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO- catch specific exceptions
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
 			return false;
 		try {
@@ -92,20 +91,21 @@ public class SpotterApp {
 				output  = frontend.trackMatch(target, arguments[0], arguments[1]);
 			printResult(output);
 		} catch(SauronException e) {
-			System.out.println("Invalid usage of spot");
+			System.out.println("Invalid usage of spot - " + reactToException(e));
+			System.out.println("\tUsage: spot <ObjectType> <ObjectId>");
 		}
 		return true;
 	}
 
 	private static boolean trailCommand(SiloFrontend frontend, String target, String[] arguments) {
-		//TODO- catch specific exceptions
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
 			return false;
 		try {
 			List<String> output  = frontend.trace(target, arguments[0], arguments[1]);
 			printResult(output);
 		} catch(SauronException e){
-			System.out.println("Invalid usage of trace");
+			System.out.println("Invalid usage of trail - " + reactToException(e));
+			System.out.println("\tUsage: trail <ObjectType> <ObjectId>");
 		}
 		return true;
 	}
@@ -128,7 +128,9 @@ public class SpotterApp {
 
 	private static boolean initCommand(SiloFrontend frontend, String target, String[] arguments) {
 		//TODO-Call frontend and create init
-		//frontend.init(target);
+		if (arguments.length != 2)
+			return false;
+		//frontend.init(target, System.getProperty("user.dir")) + "/" + arguments[1]);
 		return true;
 	}
 
@@ -137,8 +139,8 @@ public class SpotterApp {
 		System.out.println("spot  - gets the last observation of the object of type <type> and id <id>");
 		System.out.println("      - id can contain * meaning any match, for example 1*2 means any number starting with 1 and ending with 2");
 		System.out.println("\tUsage: spot <ObjectType> <ObjectId>");
-		System.out.println("trace - gets all the observation of the object of type <type> and exact id <id>");
-		System.out.println("\tUsage: trace <ObjectType> <ObjectId>");
+		System.out.println("trail - gets all the observation of the object of type <type> and exact id <id>");
+		System.out.println("\tUsage: trail <ObjectType> <ObjectId>");
 		System.out.println("ping  - checks status of the server");
 		System.out.println("\tUsage: ping");
 		System.out.println("clear - clears the server");
@@ -206,7 +208,20 @@ public class SpotterApp {
 	}
 
 	private static void printResult(List<String> output) {
-		output.stream().forEach(line -> System.out.println(line));
+		output.forEach(line -> System.out.println(line));
+	}
+
+	private static String reactToException(SauronException e) {
+		switch(e.getErrorMessage()) {
+			case OBJECT_NOT_FOUND:
+				return "Object does not exists";
+			case INVALID_ID:
+				return "Invalid ID given";
+			case TYPE_DOES_NOT_EXIST:
+				return "Invalid type given";
+			default:
+				return "An error occurred";
+		}
 	}
 
 }
