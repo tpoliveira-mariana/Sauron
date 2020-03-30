@@ -152,7 +152,7 @@ public class SpotterApp {
 			_frontend.ctrlInit(filePath);
 			System.out.println("Success!");
 		} catch(SauronException e){
-			System.out.println("Invalid usage of trail - " + reactToException(e));
+			System.out.println("Invalid usage of init - " + reactToException(e));
 			displayCommandUsage("init");
 		}
 	}

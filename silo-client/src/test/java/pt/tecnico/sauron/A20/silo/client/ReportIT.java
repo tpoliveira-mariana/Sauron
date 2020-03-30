@@ -8,9 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReportIT extends BaseIT {
-    private static SiloFrontend frontend = new SiloFrontend();
+    private static SiloFrontend frontend;
     private static final String TEST_DATA_FILE = "./src/test/reportIT_data.txt";
-    private static final String TARGET = "localhost:8080";
+    private static final String HOST = "localhost";
+    private static final String PORT = "8000";
     private static final String CAM_NAME_1 = "Tagus";
     private static final String INEXISTENT_CAM_NAME = "Test";
     private static final String PERSON_ID_1 = "1";
@@ -26,8 +27,9 @@ public class ReportIT extends BaseIT {
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() {
+        frontend = new SiloFrontend(HOST, PORT);
         try {
-            frontend.ctrlInit(TARGET, TEST_DATA_FILE);
+            frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
@@ -47,7 +49,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", PERSON_ID_1, obs);
         addObservation("car", CAR_ID_1, obs);
-        Assertions.assertDoesNotThrow(() -> frontend.report(TARGET, CAM_NAME_1, obs));
+        Assertions.assertDoesNotThrow(() -> frontend.report(CAM_NAME_1, obs));
     }
 
     @Test
@@ -58,7 +60,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_CAM_NAME,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, INEXISTENT_CAM_NAME, obs)
+                        () -> frontend.report(INEXISTENT_CAM_NAME, obs)
                 ).getErrorMessage()
         );
     }
@@ -71,7 +73,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.TYPE_DOES_NOT_EXIST,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -81,7 +83,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = null;
         Assertions.assertThrows(
                 NullPointerException.class,
-                () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                () -> frontend.report(CAM_NAME_1, obs)
         );
     }
 
@@ -93,7 +95,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -106,7 +108,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -119,7 +121,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -132,7 +134,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -145,7 +147,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -158,7 +160,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
@@ -171,7 +173,7 @@ public class ReportIT extends BaseIT {
                 ErrorMessage.INVALID_ID,
                 Assertions.assertThrows(
                         SauronException.class,
-                        () -> frontend.report(TARGET, CAM_NAME_1, obs)
+                        () -> frontend.report(CAM_NAME_1, obs)
                 ).getErrorMessage()
         );
     }
