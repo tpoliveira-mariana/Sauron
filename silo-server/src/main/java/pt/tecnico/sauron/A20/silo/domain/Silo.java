@@ -24,6 +24,11 @@ public class Silo {
         return _objs;
     }
 
+    public void clear() {
+        _cams.clear();
+        _objs.clear();
+    }
+
     public void addCamera(SauronCamera cam) throws SauronException {
         SauronCamera test = _cams.get(cam.getName());
 

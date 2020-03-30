@@ -17,6 +17,7 @@ enum Status {
     DUPLICATE_CAMERA = 6;
     DUPLICATE_CAM_NAME = 7;
     OBJECT_NOT_FOUND = 8;
+    INVALID_ARGUMENT = 9;
 }
 
 enum ObjectType {
@@ -104,6 +105,25 @@ message TraceResponse {
 }
 
 
+
+message PingRequest {
+    string input = 2;
+}
+
+message PingResponse {
+    Status status = 1;
+    string output = 2;
+}
+
+message ClearRequest {
+}
+
+message ClearResponse {
+    Status status = 1;
+}
+
+
+
 service Sauron {
     rpc CamJoin(CamJoinRequest) returns (CamJoinResponse);
 
@@ -117,5 +137,7 @@ service Sauron {
 
     rpc Trace(TraceRequest) returns (TraceResponse);
 
-    //TODO - control services
+    rpc CtrlPing(PingRequest) returns (PingResponse);
+
+    rpc CtrlClear(ClearRequest) returns (ClearResponse);
 }

@@ -12,7 +12,8 @@ public enum ErrorMessage {
     TYPE_DOES_NOT_EXIST("The type does not exist."),
     INVALID_ID("Invalid identifier provided."),
     OBJECT_NOT_FOUND("The requested Sauron Object was not found."),
-    ERROR_PROCESSING_FILE("Error processing provided file.");
+    ERROR_PROCESSING_FILE("Error processing provided file."),
+    INVALID_ARGUMENT("Invalid argument for requested method.");
 
     public final String label;
 
