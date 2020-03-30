@@ -99,12 +99,12 @@ public class SiloFrontend {
     }
 
     public List<String> trace(String type, String id) throws SauronException {
-        TrackMatchRequest request = TrackMatchRequest.newBuilder()
+        TraceRequest request = TraceRequest.newBuilder()
                 .setType(stringToType(type))
                 .setId(id)
                 .build();
 
-        TrackMatchResponse response = _stub.trackMatch(request);
+        TraceResponse response = _stub.trace(request);
         if (response.getStatus() == Status.OK) {
             return response.getObservationsList().stream()
                     .map(this::printObservation)

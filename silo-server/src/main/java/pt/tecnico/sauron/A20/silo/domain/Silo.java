@@ -105,9 +105,9 @@ public class Silo {
         if (sauObs == null)
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 
-        return sauObs.stream()
-                .sorted(Collections.reverseOrder())
-                .collect(Collectors.toList());
+        sauObs = new ArrayList<>(sauObs);
+        Collections.reverse(sauObs);
+        return sauObs;
     }
 
     private String buildRegex(String parcId) throws SauronException {
