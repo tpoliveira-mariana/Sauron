@@ -50,25 +50,16 @@ public class TraceIT extends BaseIT {
     // tests
 
     @Test
-    public void traceNOK_empty() {
-        try {
-            List<String> result = frontend.trace(CAR_TYPE, CAR_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
-        }
-    }
-
-    @Test
     public void traceOK() {
         try {
             List<String> cams = setVals(CAM_FCT, CAM_ALAMEDA, CAM_TAGUS);
             List<String> lats = setVals("26.0", "13.0", "12.0");
             List<String> longs = setVals("-39.567", "-36.5", "-36.0" );
             List<String> result = frontend.trace(PERSON_TYPE, PERSON_ID_1);
+            Assertions.assertTrue(result.size() == 3);
             int i = 0;
             for (String r : result) {
+                System.out.println(r);
                 StringTokenizer st = new StringTokenizer(r, ",");
                 Assertions.assertEquals(6, st.countTokens());
                 Assertions.assertEquals("person", st.nextToken());
@@ -82,6 +73,17 @@ public class TraceIT extends BaseIT {
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
+        }
+    }
+
+    @Test
+    public void traceNOK_empty() {
+        try {
+            List<String> result = frontend.trace(CAR_TYPE, CAR_ID);
+            Assertions.assertTrue(result.isEmpty());
+        }
+        catch (SauronException e) {
+            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
         }
     }
 
