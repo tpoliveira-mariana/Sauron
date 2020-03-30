@@ -14,8 +14,10 @@ import pt.tecnico.sauron.A20.silo.client.SiloFrontend;
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.DUPLICATE_CAMERA;
 
 public class EyeApp {
-	private static String PERSON = "person";
-	private static String CAR = "car";
+	private static final String PERSON = "person";
+	private static final String CAR = "car";
+
+	private static SiloFrontend _frontend;
 
 	public static void main(String[] args) {
 		System.out.println(EyeApp.class.getSimpleName());
@@ -35,7 +37,8 @@ public class EyeApp {
 
 		final String host = args[0];
 		final int port = Integer.parseInt(args[1]);
-		final String target = host + ":" + port;
+		_frontend = new SiloFrontend(host, Integer.toString(port));
+
 		String cameraName = args[2];
 		double lat, lon;
 
@@ -48,20 +51,18 @@ public class EyeApp {
 			return ;
 		}
 
-		processCameraObservations(target, cameraName, lat, lon);
+		processCameraObservations(cameraName, lat, lon);
 	}
 
-	private static void processCameraObservations(String target, String cameraName, double lat, double lon) {
-		SiloFrontend frontend = new SiloFrontend();
-
-		if (registerCamera(frontend, target, cameraName, lat, lon)) {
+	private static void processCameraObservations(String cameraName, double lat, double lon) {
+		if (registerCamera(cameraName, lat, lon)) {
 
 			try (Scanner scanner = new Scanner(System.in)) {
 				List<List<String>> observations = new ArrayList<>();
 
 				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
-					if (!handledSpecialLine(frontend, target, cameraName, line, observations)) {
+					if (!handledSpecialLine(cameraName, line, observations)) {
 						StringTokenizer st = new StringTokenizer(line, ",");
 						if (st.countTokens() != 2) {
 							skipMessage("Invalid command.");
@@ -71,7 +72,7 @@ public class EyeApp {
 					}
 				}
 
-				submitObservations(frontend, target, cameraName, observations);
+				submitObservations(cameraName, observations);
 
 			} catch (Exception e) {
 				System.out.println(e.getMessage());
@@ -95,7 +96,7 @@ public class EyeApp {
 		observations.add(obs);
 	}
 
-	private static boolean registerCamera(SiloFrontend frontend, String target, String name, double lat, double lon) {
+	private static boolean registerCamera(String name, double lat, double lon) {
 		if (!name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15) {
 			shutDownMessage("Invalid camera name provided.");
 			return false;
@@ -106,7 +107,7 @@ public class EyeApp {
 		}
 
 		try {
-			frontend.camJoin(target, name, lat, lon);
+			_frontend.camJoin(name, lat, lon);
 			return true;
 		}
 		catch (SauronException e) {
@@ -121,11 +122,11 @@ public class EyeApp {
 		}
 	}
 
-	private static boolean handledSpecialLine(SiloFrontend frontend, String target, String camName, String line, List<List<String>> observations) {
+	private static boolean handledSpecialLine(String camName, String line, List<List<String>> observations) {
 		// blank line
 		if (line.isBlank()) {
 			if (!observations.isEmpty()) {
-				submitObservations(frontend, target, camName, observations);
+				submitObservations(camName, observations);
 			}
 			return true;
 		}
@@ -158,9 +159,9 @@ public class EyeApp {
 		return false;
 	}
 
-	private static void submitObservations(SiloFrontend frontend, String target, String camName, List<List<String>> observations) {
+	private static void submitObservations(String camName, List<List<String>> observations) {
 		try {
-			frontend.report(target, camName, observations);
+			_frontend.report(camName, observations);
 			observations.clear();
 		}
 		catch (SauronException e) {

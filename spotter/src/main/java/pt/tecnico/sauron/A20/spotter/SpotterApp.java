@@ -9,8 +9,10 @@ import java.util.List;
 import java.util.Scanner;
 
 public class SpotterApp {
-	private static String PERSON = "person";
-	private static String CAR = "car";
+	private static final String PERSON = "person";
+	private static final String CAR = "car";
+
+	private static SiloFrontend _frontend;
 	
 	public static void main(String[] args) {
 		System.out.println(SpotterApp.class.getSimpleName());
@@ -29,14 +31,13 @@ public class SpotterApp {
 
 		final String host = args[0];
 		final int port = Integer.parseInt(args[1]);
-		final String target = host + ":" + port;
+		_frontend = new SiloFrontend(host, Integer.toString(port));
 
-		waitInput(target);
+		waitInput();
 
 	}
 
-	private static void waitInput(String target) {
-		SiloFrontend frontend = new SiloFrontend();
+	private static void waitInput() {
 		System.out.println("Type <help> for usage");
 		try (Scanner scanner = new Scanner(System.in)) {
 			while(scanner.hasNextLine()){
@@ -45,19 +46,19 @@ public class SpotterApp {
 				String arguments[] = command.split(" ");
 				switch(arguments[0]){
 					case "spot":
-						status = spotCommand(frontend,target, arguments);
+						status = spotCommand(arguments);
 						break;
 					case "trail":
-						status = trailCommand(frontend,target, arguments);
+						status = trailCommand(arguments);
 						break;
 					case "ping":
-						status = pingCommand(frontend,target, arguments);
+						status = pingCommand(arguments);
 						break;
 					case "clear":
-						status = clearCommand(frontend,target, arguments);
+						status = clearCommand(arguments);
 						break;
 					case "init":
-						status = initCommand(frontend,target, arguments);
+						status = initCommand(arguments);
 						break;
 					case "exit":
 						if (arguments.length != 1) {
@@ -80,16 +81,16 @@ public class SpotterApp {
 		}
 	}
 
-	private static boolean spotCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static boolean spotCommand(String[] arguments) {
 		//TODO- catch specific exceptions
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
 			return false;
 		try {
 			List<String> output = new ArrayList<>();
 			if (!arguments[2].contains("*"))
-				output.add(frontend.track(target, arguments[0], arguments[1]));
+				output.add(_frontend.track(arguments[0], arguments[1]));
 			else
-				output  = frontend.trackMatch(target, arguments[0], arguments[1]);
+				output  = _frontend.trackMatch(arguments[0], arguments[1]);
 			printResult(output);
 		} catch(SauronException e) {
 			System.out.println("Invalid usage of spot");
@@ -97,12 +98,12 @@ public class SpotterApp {
 		return true;
 	}
 
-	private static boolean trailCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static boolean trailCommand(String[] arguments) {
 		//TODO- catch specific exceptions
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
 			return false;
 		try {
-			List<String> output  = frontend.trace(target, arguments[0], arguments[1]);
+			List<String> output  = _frontend.trace(arguments[0], arguments[1]);
 			printResult(output);
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trace");
@@ -110,25 +111,25 @@ public class SpotterApp {
 		return true;
 	}
 
-	private static boolean pingCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static boolean pingCommand(String[] arguments) {
 		//TODO- catch exceptions and create ping
 		if (arguments.length != 1)
 			return false;
-		//frontend.ping(target);
+		//frontend.ping(input);
 		return true;
 	}
 
-	private static boolean clearCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static boolean clearCommand(String[] arguments) {
 		//TODO- catch exceptions and create clear
 		if (arguments.length != 1)
 			return false;
-		//frontend.clear(target);
+		//frontend.clear();
 		return true;
 	}
 
-	private static boolean initCommand(SiloFrontend frontend, String target, String[] arguments) {
+	private static boolean initCommand(String[] arguments) {
 		//TODO-Call frontend and create init
-		//frontend.init(target);
+		//frontend.init(filename);
 		return true;
 	}
 
