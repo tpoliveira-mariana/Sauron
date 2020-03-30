@@ -37,7 +37,12 @@ public class ReportIT extends BaseIT {
 
     @AfterAll
     public static void oneTimeTearDown() {
-        // TODO call frontend.clean()
+        try {
+            frontend.ctrlClear(TARGET);
+        }
+            catch (SauronException e) {
+            System.out.println(e.getErrorMessageLabel());
+        }
     }
 
     // tests

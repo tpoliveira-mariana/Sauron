@@ -154,10 +154,13 @@ public class SiloFrontend {
                 String line = scanner.nextLine();
                 StringTokenizer st = new StringTokenizer(line, ",");
                 String type = st.nextToken();
-                if (type.equals("done") && !data.isEmpty() && camName != null) {
-                    report(target, camName, data);
+                if (type.equals("done")) {
+                    if (!data.isEmpty() && camName != null) {
+                        report(target, camName, data);
+                    }
+                    break;
                 }
-                if (type.equals("cam")) {
+                else if (type.equals("cam")) {
                     if (!data.isEmpty()) {
                         report(target, camName, data);
                         data.clear();
