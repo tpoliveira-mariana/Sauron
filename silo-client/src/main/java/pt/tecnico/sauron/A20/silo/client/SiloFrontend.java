@@ -48,10 +48,11 @@ public class SiloFrontend {
         SauronGrpc.SauronBlockingStub stub = getStub(target);
 
         ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
+        Cam cam = Cam.newBuilder().setName(name).build();
 
         for (List<String> observation : observations){
             ObjectType type = stringToType(observation.get(0));
-            Observation builderObs = Observation.newBuilder().setType(type).setId(observation.get(1)).build();
+            Observation builderObs = Observation.newBuilder().setCam(cam).setType(type).setId(observation.get(1)).build();
             builder.addObservations(builderObs);
         }
 

@@ -33,23 +33,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setStatus(Status.OK);
         }
         catch(SauronException e) {
-            switch(e.getErrorMessage()) {
-                case DUPLICATE_CAMERA:
-                    builder.setStatus(Status.DUPLICATE_CAMERA);
-                    break;
-                case DUPLICATE_CAM_NAME:
-                    builder.setStatus(Status.DUPLICATE_CAM_NAME);
-                    break;
-                case INVALID_COORDINATES:
-                    builder.setStatus(Status.INVALID_COORDINATES);
-                    break;
-                case INVALID_CAM_NAME:
-                    builder.setStatus(Status.INVALID_NAME);
-                    break;
-                default:
-                    builder.setStatus(Status.UNRECOGNIZED);
-            }
-
+            builder.setStatus(reactToException(e));
         }
 
         CamJoinResponse response = builder.build();
@@ -66,7 +50,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
         }
         catch (SauronException e) {
-            builder.setStatus(Status.INEXISTENT_CAMERA);
+            builder.setStatus(reactToException(e));
         }
 
         CamInfoResponse response = builder.build();
@@ -78,43 +62,27 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     @Override
     public void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
         ReportResponse.Builder builder = ReportResponse.newBuilder();
-        SauronCamera cam = null;
-        boolean camerror = false;
+        SauronCamera cam;
         try {
             cam = silo.getCamByName(request.getName());
         } catch(SauronException e) {
-            builder.setStatus(Status.INEXISTENT_CAMERA);
-            camerror = true;
+            cam = null;
         }
         List<Observation> observations = request.getObservationsList();
-        boolean error = false;
+        builder.setStatus(cam == null ? Status.INEXISTENT_CAMERA : Status.OK);
         for(Observation obs: observations) {
-            if (camerror) break;
+            if (cam == null) break;
 
             try {
                 SauronObject obj = silo.getObjectByTypeAndId(getObjectType(obs.getType()), obs.getId());
                 SauronObservation observation = new SauronObservation(obj, cam, LocalDateTime.now());
                 silo.addObservation(observation);
-                builder.setStatus(Status.OK);
             }
             catch(SauronException e) {
-                error = true;
-                switch(e.getErrorMessage()) {
-                    case INVALID_PERSON_IDENTIFIER:
-                    case INVALID_CAR_ID:
-                        builder.setStatus(Status.INVALID_ID);
-                        break;
-                    case TYPE_DOES_NOT_EXIST:
-                        builder.setStatus(Status.INVALID_TYPE);
-                        break;
-                    default:
-                        builder.setStatus(Status.UNRECOGNIZED);
-                }
+                builder.setStatus(reactToException(e));
             }
         }
 
-        if (!error)
-            builder.setStatus(Status.OK);
         ReportResponse response = builder.build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -129,10 +97,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             builder.setObservation(buildObs(sauObs)).setStatus(Status.OK);
 
         } catch (SauronException e) {
-            if (e.getErrorMessage().equals(ErrorMessage.OBJECT_NOT_FOUND))
-                builder.setStatus(Status.OBJECT_NOT_FOUND);
-            else
-                builder.setStatus(Status.UNRECOGNIZED);
+            builder.setStatus(reactToException(e));
         }
 
         TrackResponse response = builder.build();
@@ -153,10 +118,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                 builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()))
                         .setStatus(Status.OK);
         } catch (SauronException e) {
-            if (e.getErrorMessage().equals(ErrorMessage.INVALID_ID))
-                builder.setStatus(Status.INVALID_ID);
-            else
-                builder.setStatus(Status.UNRECOGNIZED);
+            builder.setStatus(reactToException(e));
         }
 
         TrackMatchResponse response = builder.build();
@@ -175,10 +137,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                     .setStatus(Status.OK);
 
         } catch (SauronException e) {
-            if (e.getErrorMessage().equals(ErrorMessage.OBJECT_NOT_FOUND))
-                builder.setStatus(Status.OBJECT_NOT_FOUND);
-            else
-                builder.setStatus(Status.UNRECOGNIZED);
+            builder.setStatus(reactToException(e));
         }
 
         TraceResponse response = builder.build();
@@ -214,6 +173,29 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                 return "car";
             default:
                 throw new SauronException(TYPE_DOES_NOT_EXIST);
+        }
+    }
+
+    private Status reactToException(SauronException e) {
+        switch(e.getErrorMessage()) {
+            case DUPLICATE_CAMERA:
+                return Status.DUPLICATE_CAMERA;
+            case DUPLICATE_CAM_NAME:
+                return Status.DUPLICATE_CAM_NAME;
+            case INVALID_COORDINATES:
+                return Status.INVALID_COORDINATES;
+            case INVALID_CAM_NAME:
+                return Status.INVALID_NAME;
+            case OBJECT_NOT_FOUND:
+                return Status.OBJECT_NOT_FOUND;
+            case INVALID_PERSON_IDENTIFIER:
+            case INVALID_CAR_ID:
+            case INVALID_ID:
+                return Status.INVALID_ID;
+            case TYPE_DOES_NOT_EXIST:
+                return Status.INVALID_TYPE;
+            default:
+                return Status.UNRECOGNIZED;
         }
     }
 

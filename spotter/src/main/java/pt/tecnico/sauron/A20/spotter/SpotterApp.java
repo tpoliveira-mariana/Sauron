@@ -4,6 +4,8 @@ package pt.tecnico.sauron.A20.spotter;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.client.SiloFrontend;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class SpotterApp {
@@ -83,10 +85,12 @@ public class SpotterApp {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], true))
 			return false;
 		try {
+			List<String> output = new ArrayList<>();
 			if (!arguments[2].contains("*"))
-				frontend.track(target, arguments[0], arguments[1]);
+				output.add(frontend.track(target, arguments[0], arguments[1]));
 			else
-				frontend.trackMatch(target, arguments[0], arguments[1]);
+				output  = frontend.trackMatch(target, arguments[0], arguments[1]);
+			printResult(output);
 		} catch(SauronException e) {
 			System.out.println("Invalid usage of spot");
 		}
@@ -98,7 +102,8 @@ public class SpotterApp {
 		if (arguments.length != 3 || !checkObjectArguments(arguments[1], arguments[2], false))
 			return false;
 		try {
-			frontend.trace(target, arguments[0], arguments[1]);
+			List<String> output  = frontend.trace(target, arguments[0], arguments[1]);
+			printResult(output);
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trace");
 		}
@@ -198,6 +203,10 @@ public class SpotterApp {
 			return false;
 		}
 		return true;
+	}
+
+	private static void printResult(List<String> output) {
+		output.stream().forEach(line -> System.out.println(line));
 	}
 
 }
