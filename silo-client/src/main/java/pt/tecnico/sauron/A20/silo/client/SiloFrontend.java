@@ -1,18 +1,15 @@
 package pt.tecnico.sauron.A20.silo.client;
 
-import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,21 +34,22 @@ public class SiloFrontend {
             CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
 
             _stub.camJoin(request);
-        }
-        catch (StatusRuntimeException e) {
+        } catch (StatusRuntimeException e) {
             throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public double[] camInfo(String name) throws SauronException {
+        if (name == null)
+            throw new SauronException(INVALID_CAM_NAME);
+
         try {
             CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
 
             CamInfoResponse response = _stub.camInfo(request);
 
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
-        }
-        catch (StatusRuntimeException e) {
+        } catch (StatusRuntimeException e) {
             throw reactToStatus(e.getStatus().getDescription());
         }
     }
@@ -100,7 +98,7 @@ public class SiloFrontend {
             TrackMatchResponse response = _stub.trackMatch(request);
             return response.getObservationsList()
                     .stream()
-                    .sorted(Comparator.comparing(obs -> obs.getObject().getId()))
+                    .sorted(getComparator(response))
                     .map(this::printObservation)
                     .collect(Collectors.toList());
         }
@@ -202,8 +200,22 @@ public class SiloFrontend {
                 + obs.getCam().getCoordinates().getLongitude();
     }
 
+    private Comparator<Observation> getComparator(TrackMatchResponse response) {
+        ObjectType type = response.getObservationsCount() == 0 ? ObjectType.CAR : response.getObservations(0).getObject().getType();
+        switch (type){
+            case PERSON:
+                return Comparator.comparingLong(obs -> Long.parseLong(obs.getObject().getId()));
+            case CAR:
+                return Comparator.comparing(obs -> obs.getObject().getId());
+            default:
+                return Comparator.comparing(Observation::toString);
+        }
+
+    }
 
     private SauronException reactToStatus(String msg) {
+        if (msg == null)
+            return new SauronException(UNKNOWN);
         switch (msg) {
             case "DUPLICATE_CAMERA":
                 return new SauronException(DUPLICATE_CAMERA);

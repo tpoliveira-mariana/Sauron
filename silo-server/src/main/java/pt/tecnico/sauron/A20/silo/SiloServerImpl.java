@@ -237,6 +237,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                 so.onError(NOT_FOUND
                         .withDescription("TYPE_DOES_NOT_EXIST").asRuntimeException());
                 break;
+            case CAMERA_NOT_FOUND:
+                so.onError(NOT_FOUND
+                        .withDescription("CAMERA_NOT_FOUND").asRuntimeException());
+                break;
             default:
                 so.onError(UNKNOWN
                         .withDescription("UNKNOWN").asRuntimeException());

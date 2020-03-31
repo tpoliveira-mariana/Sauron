@@ -5,8 +5,6 @@ import java.util.stream.Collectors;
 
 import pt.tecnico.sauron.A20.exceptions.*;
 
-import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
-
 
 public class Silo {
 
@@ -33,10 +31,10 @@ public class Silo {
         SauronCamera test = _cams.get(cam.getName());
 
         if (test != null && test.getLatitude() == cam.getLatitude() && test.getLongitude() == cam.getLongitude())  {
-            throw new SauronException(DUPLICATE_CAMERA);
+            throw new SauronException(ErrorMessage.DUPLICATE_CAMERA);
         }
         else if (test != null) {
-            throw new  SauronException(DUPLICATE_CAM_NAME);
+            throw new  SauronException(ErrorMessage.DUPLICATE_CAM_NAME);
         }
         _cams.put(cam.getName(), cam);
 
@@ -54,12 +52,11 @@ public class Silo {
     }
 
     public SauronCamera getCamByName(String name) throws SauronException {
-        try {
-            return _cams.get(name);
-        }
-        catch (NullPointerException e) {
-            throw new SauronException(CAMERA_NOT_FOUND);
-        }
+        SauronCamera.checkAttributes(name, 0, 0);
+        SauronCamera cam = _cams.get(name);
+        if (cam == null)
+            throw new SauronException(ErrorMessage.CAMERA_NOT_FOUND);
+        return cam;
     }
 
     public SauronObject getObjectByTypeAndId(String type, String id) throws SauronException {
@@ -77,7 +74,7 @@ public class Silo {
             case "car":
                 return new SauronCar(id);
             default:
-                throw new SauronException(TYPE_DOES_NOT_EXIST);
+                throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
         }
     }
 

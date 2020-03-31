@@ -133,6 +133,7 @@ public class CamJoinIT extends BaseIT{
 
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
         Assertions.assertEquals(ErrorMessage.DUPLICATE_CAMERA, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
     }
 
     @Test
