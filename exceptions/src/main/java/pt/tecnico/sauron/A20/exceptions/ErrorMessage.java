@@ -2,6 +2,7 @@ package pt.tecnico.sauron.A20.exceptions;
 
 public enum ErrorMessage {
     UNKNOWN("An unknown exception occurred."),
+    REFUSED("Connection to server refused."),
     DUPLICATE_CAMERA("Camera already exists."),
     DUPLICATE_CAM_NAME("Camera name already in use."),
     INVALID_COORDINATES("Invalid coordinates provided."),

@@ -1,18 +1,16 @@
 package pt.tecnico.sauron.A20.silo.client;
 
-import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,7 +37,7 @@ public class SiloFrontend {
             _stub.camJoin(request);
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -52,7 +50,7 @@ public class SiloFrontend {
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -70,7 +68,7 @@ public class SiloFrontend {
             _stub.report(request);
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -85,7 +83,7 @@ public class SiloFrontend {
             return printObservation(response.getObservation());
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
 
     }
@@ -105,7 +103,7 @@ public class SiloFrontend {
                     .collect(Collectors.toList());
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -122,8 +120,7 @@ public class SiloFrontend {
                     .collect(Collectors.toList());
         }
         catch (StatusRuntimeException e) {
-            System.out.println(e.getStatus());
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -135,7 +132,7 @@ public class SiloFrontend {
             return response.getOutput();
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -145,10 +142,9 @@ public class SiloFrontend {
             _stub.ctrlClear(request);
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
-
 
     public void ctrlInit(String fileName) throws SauronException {
         try {
@@ -202,6 +198,12 @@ public class SiloFrontend {
                 + obs.getCam().getCoordinates().getLongitude();
     }
 
+    private SauronException properException(StatusRuntimeException e) {
+        if (e.getStatus().getCode().equals(Status.Code.UNAVAILABLE)) {
+            return new SauronException(REFUSED);
+        }
+        return reactToStatus(e.getStatus().getDescription());
+    }
 
     private SauronException reactToStatus(String msg) {
         switch (msg) {

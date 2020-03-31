@@ -34,23 +34,21 @@ public class EyeApp {
 			return ;
 		}
 
-		final String host = args[0];
-		final int port = Integer.parseInt(args[1]);
-		_frontend = new SiloFrontend(host, Integer.toString(port));
-
-		String cameraName = args[2];
-		double lat, lon;
-
 		try {
+			final String host = args[0];
+			final int port = Integer.parseInt(args[1]);
+			_frontend = new SiloFrontend(host, Integer.toString(port));
+
+			String cameraName = args[2];
+			double lat, lon;
 			lat = Double.parseDouble(args[3]);
 			lon = Double.parseDouble(args[4]);
-		}
-		catch (Exception e) {
-			shutDownMessage("Invalid double provided.");
-			return ;
-		}
 
-		processCameraObservations(cameraName, lat, lon);
+			processCameraObservations(cameraName, lat, lon);
+		}
+		catch (NumberFormatException e) {
+			shutDownMessage("Invalid number provided.");
+		}
 	}
 
 	private static void processCameraObservations(String cameraName, double lat, double lon) {
