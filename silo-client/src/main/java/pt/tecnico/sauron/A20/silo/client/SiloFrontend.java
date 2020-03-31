@@ -21,7 +21,7 @@ public class SiloFrontend {
     private SauronGrpc.SauronBlockingStub _stub;
 
     public SiloFrontend(String host, String port) {
-        String target = host + ":" + port;
+        String target = host + ":" + Integer.parseInt(port);
         final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         _stub = SauronGrpc.newBlockingStub(channel);
     }

@@ -26,10 +26,11 @@ public class SpotterApp {
 			System.out.printf("Usage: java %s host port%n", SpotterApp.class.getSimpleName());
 			return;
 		}
-
-		final String host = args[0];
-		final int port = Integer.parseInt(args[1]);
-		_frontend = new SiloFrontend(host, Integer.toString(port));
+		try {
+			_frontend = new SiloFrontend(args[0], args[1]);
+		} catch (NumberFormatException e) {
+			System.out.println("Invalid number provided.");
+		}
 
 		waitInput();
 

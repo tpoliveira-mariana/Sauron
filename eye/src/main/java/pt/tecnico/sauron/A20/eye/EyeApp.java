@@ -35,14 +35,11 @@ public class EyeApp {
 		}
 
 		try {
-			final String host = args[0];
-			final int port = Integer.parseInt(args[1]);
-			_frontend = new SiloFrontend(host, Integer.toString(port));
+			_frontend = new SiloFrontend(args[0], args[1]);
 
 			String cameraName = args[2];
-			double lat, lon;
-			lat = Double.parseDouble(args[3]);
-			lon = Double.parseDouble(args[4]);
+			double lat = Double.parseDouble(args[3]);
+			double lon = Double.parseDouble(args[4]);
 
 			processCameraObservations(cameraName, lat, lon);
 		}
