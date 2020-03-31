@@ -7,19 +7,6 @@ option java_multiple_files = true;
 
 import "google/protobuf/timestamp.proto";
 
-enum Status {
-    OK = 0;
-    INVALID_NAME = 1;
-    INVALID_COORDINATES = 2;
-    INEXISTENT_CAMERA = 3;
-    INVALID_ID = 4;
-    INVALID_TYPE = 5;
-    DUPLICATE_CAMERA = 6;
-    DUPLICATE_CAM_NAME = 7;
-    OBJECT_NOT_FOUND = 8;
-    INVALID_ARGUMENT = 9;
-}
-
 enum ObjectType {
     CAR = 0;
     PERSON = 1;
@@ -52,16 +39,13 @@ message CamJoinRequest {
     Coordinates coordinates = 2;
 }
 
-message CamJoinResponse {
-    Status status = 1;
-}
+message CamJoinResponse { }
 
 message CamInfoRequest {
     string name = 1;
 }
 
 message CamInfoResponse {
-    Status status = 1;
     Coordinates coordinates = 2;
 }
 
@@ -70,9 +54,7 @@ message ReportRequest {
     repeated Object object = 2;
 }
 
-message ReportResponse {
-    Status status = 1;
-}
+message ReportResponse { }
 
 message TrackRequest {
     ObjectType type = 1;
@@ -80,7 +62,6 @@ message TrackRequest {
 }
 
 message TrackResponse {
-    Status status = 1;
     Observation observation = 2;
 }
 
@@ -90,7 +71,6 @@ message TrackMatchRequest {
 }
 
 message TrackMatchResponse {
-    Status status = 1;
     repeated Observation observations = 2;
 }
 
@@ -100,7 +80,6 @@ message TraceRequest {
 }
 
 message TraceResponse {
-    Status status = 1;
     repeated Observation observations = 2;
 }
 
@@ -111,16 +90,13 @@ message PingRequest {
 }
 
 message PingResponse {
-    Status status = 1;
     string output = 2;
 }
 
 message ClearRequest {
 }
 
-message ClearResponse {
-    Status status = 1;
-}
+message ClearResponse { }
 
 
 

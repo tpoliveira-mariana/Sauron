@@ -1,0 +1,4 @@
+# Register 2 observations
+
+person,1
+car,11AA22
