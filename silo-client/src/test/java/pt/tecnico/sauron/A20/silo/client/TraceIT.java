@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 public class TraceIT extends BaseIT {
-    private static SiloFrontend frontend = new SiloFrontend("localhost", "8080");
+    private static SiloFrontend frontend;
     private static final String TEST_DATA_FILE = "./src/test/traceIT_data.txt";
     private static final String PERSON_ID_1 = "1";
     private static final String INEXISTENT_PERSON_ID = "30";
@@ -28,7 +28,9 @@ public class TraceIT extends BaseIT {
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() {
+        frontend = new SiloFrontend("localhost", "8080");
         try {
+            frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {
@@ -62,11 +64,11 @@ public class TraceIT extends BaseIT {
                 StringTokenizer st = new StringTokenizer(r, ",");
                 Assertions.assertEquals(6, st.countTokens());
                 Assertions.assertEquals("person", st.nextToken());
-                Assertions.assertEquals(" " + PERSON_ID_1, st.nextToken());
+                Assertions.assertEquals(PERSON_ID_1, st.nextToken());
                 st.nextToken();
-                Assertions.assertEquals(" " + cams.get(i), st.nextToken());
-                Assertions.assertEquals(" " + lats.get(i), st.nextToken());
-                Assertions.assertEquals(" " + longs.get(i), st.nextToken());
+                Assertions.assertEquals(cams.get(i), st.nextToken());
+                Assertions.assertEquals(lats.get(i), st.nextToken());
+                Assertions.assertEquals(longs.get(i), st.nextToken());
                 i++;
             }
         }

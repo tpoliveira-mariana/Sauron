@@ -8,9 +8,12 @@ import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+
+import static junit.framework.TestCase.fail;
 
 public class TrackIT extends BaseIT{
     private static final String HOST = "localhost";
@@ -22,10 +25,12 @@ public class TrackIT extends BaseIT{
     private static final String INVALID_PERSON_ID = "abc";
     private static final String PERSON_TYPE = "person";
     private static final String CAR_TYPE = "car";
+    private static final String CAR_ID = "AAAA11";
     private static final String INEXISTENT_CAR_ID = "ZZZZ99";
     private static final String INVALID_CAR_ID = "ZZZZZZ";
     private static final String INEXISTENT_TYPE = "dog";
     private static final String CAM_TAGUS = "Tagus";
+    private static final String CAM_ALAMEDA = "Alameda";
 
 
     // one-time initialization and clean-up
@@ -33,6 +38,7 @@ public class TrackIT extends BaseIT{
     public static void oneTimeSetUp() {
         frontend = new SiloFrontend(HOST, PORT);
         try {
+            frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {
@@ -54,28 +60,48 @@ public class TrackIT extends BaseIT{
     // tests
 
     @Test
-    public void trackOK() {
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-            LocalDateTime previousTime = LocalDateTime.now();
+    public void trackOK() throws SauronException{
+        String result = frontend.track(CAR_TYPE, CAR_ID);
+        String[] results = result.split(",");
 
-            String result = frontend.track(PERSON_TYPE, PERSON_ID);
-            String[] results = result.split(",");
+        Assertions.assertEquals(6, results.length);
+        Assertions.assertEquals("car", results[0]);
+        Assertions.assertEquals(CAR_ID, results[1]);
+        Assertions.assertEquals(CAM_TAGUS, results[3]);
+        Assertions.assertEquals("12.0", results[4]);
+        Assertions.assertEquals("-36.0", results[5]);
+    }
 
-            LocalDateTime resultTime = LocalDateTime.parse(results[2], formatter);
-            LocalDateTime postTime = LocalDateTime.now();
+    @Test
+    public void trackLastObservationOK() throws SauronException, InterruptedException{
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-            Assertions.assertEquals(6, results.length);
-            Assertions.assertEquals("person", results[0]);
-            Assertions.assertEquals(PERSON_ID, results[1]);
-            Assertions.assertTrue(resultTime.isAfter(previousTime) && resultTime.isBefore(postTime));
-            Assertions.assertEquals(CAM_TAGUS, results[3]);
-            Assertions.assertEquals("12.0", results[4]);
-            Assertions.assertEquals("-36.0", results[5]);
-        }
-        catch (SauronException e) {
-            System.out.println(e.getErrorMessageLabel());
-        }
+        String result = frontend.track(PERSON_TYPE, PERSON_ID);
+        String[] results = result.split(",");
+        LocalDateTime timeBefore = LocalDateTime.parse(results[2], formatter);
+
+        List<String> observation = new ArrayList<>();
+        List<List<String>> observations = new ArrayList<>();
+        observation.add(PERSON_TYPE);
+        observation.add(PERSON_ID);
+        observations.add(observation);
+
+        Thread.sleep(1000); // test needs to sleep in order to compare the times
+        frontend.report(CAM_ALAMEDA, observations);
+
+        result = frontend.track(PERSON_TYPE, PERSON_ID);
+        String[] resultsAfter = result.split(",");
+
+        LocalDateTime timeAfter = LocalDateTime.parse(resultsAfter[2], formatter);
+
+        Assertions.assertEquals(6, resultsAfter.length);
+        Assertions.assertEquals("person", resultsAfter[0]);
+        Assertions.assertEquals(PERSON_ID, resultsAfter[1]);
+        Assertions.assertTrue(timeAfter.isAfter(timeBefore));
+        Assertions.assertEquals(CAM_ALAMEDA, resultsAfter[3]);
+        Assertions.assertEquals("13.0", resultsAfter[4]);
+        Assertions.assertEquals("-36.5", resultsAfter[5]);
+
     }
 
     @Test

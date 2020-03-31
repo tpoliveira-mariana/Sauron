@@ -31,14 +31,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
+
+            CamJoinResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }
         catch(SauronException e) {
             reactToException(e, responseObserver);
         }
-
-        CamJoinResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -47,15 +47,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             SauronCamera cam = silo.getCamByName(request.getName());
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
+
+            CamInfoResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }
         catch (SauronException e) {
             reactToException(e, responseObserver);
         }
-
-        CamInfoResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-
     }
 
     @Override
@@ -72,22 +71,24 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             responseObserver.onError(NOT_FOUND
                     .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
         }
-        for(Object obj: objects) {
-            if (cam == null) break;
-
+        else {
+            boolean error = false;
             try {
-                SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
-                SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
-                silo.addObservation(observation);
-            }
-            catch(SauronException e) {
+                for(Object obj: objects) {
+                    SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
+                    SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
+                    silo.addObservation(observation);
+                }
+            } catch (SauronException e) {
+                error = true;
                 reactToException(e, responseObserver);
             }
+            if (!error) {
+                ReportResponse response = builder.build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
         }
-
-        ReportResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -98,13 +99,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
             builder.setObservation(buildObs(sauObs));
 
+            TrackResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
         } catch (SauronException e) {
             reactToException(e, responseObserver);
         }
-
-        TrackResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -117,15 +118,16 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             if (sauObs.isEmpty())
                 responseObserver.onError(NOT_FOUND
                         .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
-            else
+            else {
                 builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
+
+                TrackMatchResponse response = builder.build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
         } catch (SauronException e) {
             reactToException(e, responseObserver);
         }
-
-        TrackMatchResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -137,13 +139,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
             builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
 
+            TraceResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+
         } catch (SauronException e) {
             reactToException(e, responseObserver);
         }
-
-        TraceResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -156,11 +158,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         } else {
             String output = "Hello " + request.getInput() + "!";
             builder.setOutput(output);
-        }
 
-        PingResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+            PingResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        }
     }
 
     @Override
