@@ -29,6 +29,7 @@ public class TraceIT extends BaseIT {
     @BeforeAll
     public static void oneTimeSetUp() {
         try {
+            frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {
@@ -62,11 +63,11 @@ public class TraceIT extends BaseIT {
                 StringTokenizer st = new StringTokenizer(r, ",");
                 Assertions.assertEquals(6, st.countTokens());
                 Assertions.assertEquals("person", st.nextToken());
-                Assertions.assertEquals(" " + PERSON_ID_1, st.nextToken());
+                Assertions.assertEquals(PERSON_ID_1, st.nextToken());
                 st.nextToken();
-                Assertions.assertEquals(" " + cams.get(i), st.nextToken());
-                Assertions.assertEquals(" " + lats.get(i), st.nextToken());
-                Assertions.assertEquals(" " + longs.get(i), st.nextToken());
+                Assertions.assertEquals(cams.get(i), st.nextToken());
+                Assertions.assertEquals(lats.get(i), st.nextToken());
+                Assertions.assertEquals(longs.get(i), st.nextToken());
                 i++;
             }
         }
