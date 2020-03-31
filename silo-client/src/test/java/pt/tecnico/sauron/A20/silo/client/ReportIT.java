@@ -26,8 +26,8 @@ public class ReportIT extends BaseIT {
     private static final String INVALID_CAR_ID_4 = "AAAAAA";
 
     // one-time initialization and clean-up
-    @BeforeAll
-    public static void oneTimeSetUp() {
+    @BeforeEach
+    public void SetUp() {
         frontend = new SiloFrontend(HOST, PORT);
         try {
             frontend.ctrlInit(TEST_DATA_FILE);
@@ -38,8 +38,8 @@ public class ReportIT extends BaseIT {
 
     }
 
-    @AfterAll
-    public static void oneTimeTearDown() {
+    @AfterEach
+    public void TearDown() {
         try {
             frontend.ctrlClear();
         }
@@ -63,7 +63,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", PERSON_ID_1, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_CAM_NAME,
+                ErrorMessage.OBJECT_NOT_FOUND,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(INEXISTENT_CAM_NAME, obs)
@@ -98,7 +98,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_1, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_PERSON_IDENTIFIER,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -111,7 +111,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_2, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_PERSON_IDENTIFIER,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -124,7 +124,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_3, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_PERSON_IDENTIFIER,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -137,7 +137,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("car", INVALID_CAR_ID_1, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_CAR_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -150,7 +150,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("car", INVALID_CAR_ID_2, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_CAR_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -163,7 +163,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("car", INVALID_CAR_ID_3, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_CAR_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -176,7 +176,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("car", INVALID_CAR_ID_4, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_ID,
+                ErrorMessage.INVALID_CAR_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)

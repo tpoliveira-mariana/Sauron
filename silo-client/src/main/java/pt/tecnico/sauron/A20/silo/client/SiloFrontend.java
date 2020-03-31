@@ -4,6 +4,8 @@ import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
+import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
@@ -27,110 +29,121 @@ public class SiloFrontend {
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
-        Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
-        CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
+        try {
+            Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
+            CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
 
-        Status status = _stub.camJoin(request).getStatus();
-        if (status != Status.OK) {
-            throw reactToStatus(status);
+            _stub.camJoin(request);
+        }
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public double[] camInfo(String name) throws SauronException {
-        CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
-        CamInfoResponse response = _stub.camInfo(request);
+        try {
+            CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
 
-        Status status = response.getStatus();
-        if (status == Status.OK) {
+            CamInfoResponse response = _stub.camInfo(request);
+
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
-        else {
-            throw reactToStatus(status);
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public void report(String name, List<List<String>> observations) throws SauronException{
-        ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
+        try {
+            ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
 
-        for (List<String> observation : observations){
-            ObjectType type = stringToType(observation.get(0));
-            Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
-            builder.addObject(builderObj);
+            for (List<String> observation : observations) {
+                ObjectType type = stringToType(observation.get(0));
+                Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
+                builder.addObject(builderObj);
+            }
+
+            ReportRequest request = builder.build();
+            _stub.report(request);
         }
-
-        ReportRequest request = builder.build();
-        ReportResponse response = _stub.report(request);
-
-        Status status = response.getStatus();
-        if (status != Status.OK)
-            throw reactToStatus(status);
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
+        }
     }
 
     public String track(String type, String id) throws SauronException {
-        TrackRequest request = TrackRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
+        try {
+            TrackRequest request = TrackRequest.newBuilder()
+                    .setType(stringToType(type))
+                    .setId(id)
+                    .build();
 
-        TrackResponse response = _stub.track(request);
-        if (response.getStatus() == Status.OK) {
+            TrackResponse response = _stub.track(request);
             return printObservation(response.getObservation());
-        } else {
-            throw reactToStatus(response.getStatus());
         }
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
+        }
+
     }
 
     public List<String> trackMatch(String type, String id) throws SauronException {
-        TrackMatchRequest request = TrackMatchRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
+        try {
+            TrackMatchRequest request = TrackMatchRequest.newBuilder()
+                    .setType(stringToType(type))
+                    .setId(id)
+                    .build();
 
-        TrackMatchResponse response = _stub.trackMatch(request);
-        if (response.getStatus() == Status.OK) {
+            TrackMatchResponse response = _stub.trackMatch(request);
             return response.getObservationsList()
                     .stream()
                     .sorted(Comparator.comparing(obs -> obs.getObject().getId()))
                     .map(this::printObservation)
                     .collect(Collectors.toList());
-        } else {
-            throw reactToStatus(response.getStatus());
+        }
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public List<String> trace(String type, String id) throws SauronException {
-        TraceRequest request = TraceRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
+        try {
+            TraceRequest request = TraceRequest.newBuilder()
+                    .setType(stringToType(type))
+                    .setId(id)
+                    .build();
 
-        TraceResponse response = _stub.trace(request);
-        if (response.getStatus() == Status.OK) {
+            TraceResponse response = _stub.trace(request);
             return response.getObservationsList().stream()
                     .map(this::printObservation)
                     .collect(Collectors.toList());
-        } else {
-            throw reactToStatus(response.getStatus());
+        }
+        catch (StatusRuntimeException e) {
+            System.out.println(e.getStatus());
+            throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public String ctrlPing(String input) throws SauronException {
-        PingRequest request = PingRequest.newBuilder().setInput(input).build();
+        try {
+            PingRequest request = PingRequest.newBuilder().setInput(input).build();
 
-        PingResponse response = _stub.ctrlPing(request);
-        if (response.getStatus() == Status.OK) {
+            PingResponse response = _stub.ctrlPing(request);
             return response.getOutput();
-        } else {
-            throw reactToStatus(response.getStatus());
+        }
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
         }
     }
 
     public void ctrlClear() throws SauronException {
-        ClearRequest request = ClearRequest.getDefaultInstance();
-
-        ClearResponse response = _stub.ctrlClear(request);
-        if (response.getStatus() != Status.OK)
-            throw reactToStatus(response.getStatus());
+        try {
+            ClearRequest request = ClearRequest.getDefaultInstance();
+            _stub.ctrlClear(request);
+        }
+        catch (StatusRuntimeException e) {
+            throw reactToStatus(e.getStatus().getDescription());
+        }
     }
 
 
@@ -187,26 +200,29 @@ public class SiloFrontend {
     }
 
 
-    private SauronException reactToStatus(Status status) {
-        switch (status) {
-            case DUPLICATE_CAMERA:
+    private SauronException reactToStatus(String msg) {
+        switch (msg) {
+            case "DUPLICATE_CAMERA":
                 return new SauronException(DUPLICATE_CAMERA);
-            case DUPLICATE_CAM_NAME:
+            case "DUPLICATE_CAM_NAME":
                 return new SauronException(DUPLICATE_CAM_NAME);
-
-            case INVALID_NAME:
-            case INEXISTENT_CAMERA:
+            case "INVALID_CAM_NAME":
                 return new SauronException(INVALID_CAM_NAME);
-
-            case INVALID_COORDINATES:
+            case "CAMERA_NOT_FOUND":
+                return new SauronException(CAMERA_NOT_FOUND);
+            case "INVALID_COORDINATES":
                 return new SauronException(INVALID_COORDINATES);
-            case INVALID_ID:
+            case "INVALID_PERSON_IDENTIFIER":
+                return new SauronException(INVALID_PERSON_IDENTIFIER);
+            case "INVALID_CAR_ID":
+                return new SauronException(INVALID_CAR_ID);
+            case "INVALID_ID":
                 return new SauronException(INVALID_ID);
-            case INVALID_TYPE:
+            case "TYPE_DOES_NOT_EXIST":
                 return new SauronException(TYPE_DOES_NOT_EXIST);
-            case OBJECT_NOT_FOUND:
+            case "OBJECT_NOT_FOUND":
                 return new SauronException(OBJECT_NOT_FOUND);
-            case INVALID_ARGUMENT:
+            case "INVALID_ARGUMENT":
                 return new SauronException(INVALID_ARGUMENT);
             default:
                 return new SauronException(UNKNOWN);
