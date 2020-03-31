@@ -25,10 +25,12 @@ public class TrackIT extends BaseIT{
     private static final String INVALID_PERSON_ID = "abc";
     private static final String PERSON_TYPE = "person";
     private static final String CAR_TYPE = "car";
+    private static final String CAR_ID = "AAAA11";
     private static final String INEXISTENT_CAR_ID = "ZZZZ99";
     private static final String INVALID_CAR_ID = "ZZZZZZ";
     private static final String INEXISTENT_TYPE = "dog";
     private static final String CAM_TAGUS = "Tagus";
+    private static final String CAM_ALAMEDA = "Alameda";
 
 
     // one-time initialization and clean-up
