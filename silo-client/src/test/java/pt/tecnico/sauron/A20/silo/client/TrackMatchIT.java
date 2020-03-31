@@ -1,9 +1,6 @@
 package pt.tecnico.sauron.A20.silo.client;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 
@@ -24,6 +21,7 @@ public class TrackMatchIT extends BaseIT{
     private static final String PERSON_ID_2 = "31";
     private static final String PERSON_ID_3 = "15";
     private static final String PERSON_ID_4 = "1331";
+    private static final String PERSON_ID_5 = "555";
     private static final String INEXISTENT_PERSON_ID = "30";
     private static final String INVALID_PERSON_ID = "abc";
     private static final String CAR_TYPE = "car";
@@ -56,12 +54,12 @@ public class TrackMatchIT extends BaseIT{
 
     @AfterAll
     public static void oneTimeTearDown() {
-        try {
+        /*try {
             frontend.ctrlClear();
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
-        }
+        }*/
     }
 
     // tests
@@ -142,27 +140,27 @@ public class TrackMatchIT extends BaseIT{
     public void trackLastObservationOK() throws SauronException, InterruptedException{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-        List<String> result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_1);
+        List<String> result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
         String[] results = result.get(0).split(",");
         LocalDateTime timeBefore = LocalDateTime.parse(results[2], formatter);
 
         List<String> observation = new ArrayList<>();
         List<List<String>> observations = new ArrayList<>();
         observation.add(PERSON_TYPE);
-        observation.add(PERSON_ID_1);
+        observation.add(PERSON_ID_5);
         observations.add(observation);
 
-        Thread.sleep(1000); // test needs to sleep in order to compare the times
+        Thread.sleep(5000); // test needs to sleep in order to compare the times
         frontend.report(CAM_ALAMEDA, observations);
 
-        result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_1);
+        result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
         String[] resultsAfter = result.get(0).split(",");
 
         LocalDateTime timeAfter = LocalDateTime.parse(resultsAfter[2], formatter);
 
         Assertions.assertEquals(6, resultsAfter.length);
         Assertions.assertEquals("person", resultsAfter[0]);
-        Assertions.assertEquals(PERSON_ID_1, resultsAfter[1]);
+        Assertions.assertEquals(PERSON_ID_5, resultsAfter[1]);
         Assertions.assertTrue(timeAfter.isAfter(timeBefore));
         Assertions.assertEquals(CAM_ALAMEDA, resultsAfter[3]);
         Assertions.assertEquals("13.0", resultsAfter[4]);
@@ -228,6 +226,7 @@ public class TrackMatchIT extends BaseIT{
     private void checkResults(List<String> output, List<String> cams, List<String> lats, List<String> longs, String type, List<String> ids) throws SauronException {
         int i = 0;
         for (String r : output) {
+            System.out.println(r);
             String[] results = r.split(",");
             Assertions.assertEquals(6, results.length);
             Assertions.assertEquals(type, results[0]);

@@ -10,4 +10,5 @@ car,CD55DB
 cam,FCT,26,-39.567
 car,AE32EB
 person,1331
+person,555
 done
