@@ -12,7 +12,6 @@ import java.util.List;
 public class CamJoinIT extends BaseIT{
     private static final String HOST = "localhost";
     private static final String PORT = "8080";
-    private static final String TEST_DATA_FILE = "./src/test/camJoinIT_data.txt";
     private static SiloFrontend frontend;
 
     private static final String NAME_TAGUS = "Tagus";
@@ -30,27 +29,42 @@ public class CamJoinIT extends BaseIT{
 
 
 
-    // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() {
         frontend = new SiloFrontend(HOST, PORT);
-        try {
-            frontend.ctrlInit(TEST_DATA_FILE);
-        }
-        catch (SauronException e) {
-            System.out.println(e.getErrorMessageLabel());
-        }
-
     }
 
     @BeforeEach
-    @AfterAll
-    public static void oneTimeTearDown() {
+    public void cleanBeforeEach() {
         try {
             frontend.ctrlClear();
-        }
-        catch (SauronException e) {
+        } catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
+        }
+    }
+
+    @AfterAll
+    public static void oneTimeCleanUp() {
+        try {
+            frontend.ctrlClear();
+        } catch (SauronException e) {
+            System.out.println(e.getErrorMessageLabel());
+        }
+    }
+
+    private void assertCamSaved(String name, double lat, double lon, boolean saved) {
+        if (saved) {
+            double[] coords = Assertions.assertDoesNotThrow(() -> frontend.camInfo(name));
+            Assertions.assertEquals(lat, coords[0]);
+            Assertions.assertEquals(lon, coords[1]);
+        } else {
+            try {
+                double[] coords = frontend.camInfo(name);
+                Assertions.assertNotEquals(lat, coords[0]);
+                Assertions.assertNotEquals(lon, coords[1]);
+            } catch (SauronException e) {
+                Assertions.assertEquals(ErrorMessage.CAMERA_NOT_FOUND, e.getErrorMessage());
+            }
         }
     }
 
@@ -59,30 +73,37 @@ public class CamJoinIT extends BaseIT{
     @Test
     public void camJoinOK_OneCam() {
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
     }
 
     @Test
     public void camJoinOK_DiffNameDiffCoords() {
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_TAGUS, LAT_TAGUS, LON_TAGUS));
+        assertCamSaved(NAME_TAGUS, LAT_TAGUS, LON_TAGUS, true);
     }
 
     @Test
     public void camJoinOK_DiffNameSameCoords() {
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_TAGUS, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_TAGUS, LAT_ALAMEDA, LON_ALAMEDA, true);
     }
 
     @Test
     public void camJoinNOK_NameTooShort() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(SHORT_NAME, LAT_ALAMEDA, LON_ALAMEDA));
         Assertions.assertEquals(ErrorMessage.INVALID_CAM_NAME, e.getErrorMessage());
+        assertCamSaved(SHORT_NAME, LAT_ALAMEDA, LON_ALAMEDA, false);
     }
 
     @Test
     public void camJoinNOK_NameTooLong() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(LONG_NAME, LAT_ALAMEDA, LON_ALAMEDA));
         Assertions.assertEquals(ErrorMessage.INVALID_CAM_NAME, e.getErrorMessage());
+        assertCamSaved(LONG_NAME, LAT_ALAMEDA, LON_ALAMEDA, false);
     }
 
     @Test
@@ -95,20 +116,32 @@ public class CamJoinIT extends BaseIT{
     public void camJoinNOK_NameNotAlphanum() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(SYMBOLIC_NAME, LAT_ALAMEDA, LON_ALAMEDA));
         Assertions.assertEquals(ErrorMessage.INVALID_CAM_NAME, e.getErrorMessage());
+        assertCamSaved(SYMBOLIC_NAME, LAT_ALAMEDA, LON_ALAMEDA, false);
     }
 
     @Test
     public void camJoinNOK_invalidCoords() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT, INVALID_LON));
         Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, INVALID_LAT, INVALID_LON, false);
     }
 
     @Test
     public void camJoinNOK_duplicateCam() {
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
+
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
-        Assertions.assertEquals(ErrorMessage.DUPLICATE_CAM_NAME, e.getErrorMessage());
+        Assertions.assertEquals(ErrorMessage.DUPLICATE_CAMERA, e.getErrorMessage());
     }
 
+    @Test
+    public void camJoinNOK_duplicateCamName() {
+        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
 
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS));
+        Assertions.assertEquals(ErrorMessage.DUPLICATE_CAM_NAME, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS, false);
+    }
 }

@@ -29,6 +29,9 @@ public class SiloFrontend {
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
+        if (name == null)
+            throw new SauronException(INVALID_CAM_NAME);
+
         try {
             Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
             CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
