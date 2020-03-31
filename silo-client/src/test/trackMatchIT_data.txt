@@ -1,0 +1,13 @@
+cam,Tagus,12,-36
+car,ABAA99
+car,ZZ33AB
+person,151
+cam,Alameda,13,-36.5
+person,31
+person,15
+car,ABCD99
+car,CD55DB
+cam,FCT,26,-39.567
+car,AE32EB
+person,1331
+done
