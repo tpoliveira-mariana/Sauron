@@ -111,7 +111,7 @@ public class TrackIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_ID, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
         }
     }
 
@@ -122,7 +122,7 @@ public class TrackIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_ID, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_IDENTIFIER, e.getErrorMessage());
         }
     }
 

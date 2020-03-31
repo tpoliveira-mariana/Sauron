@@ -11,12 +11,14 @@ import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
+import io.grpc.Status.*;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static io.grpc.Status.*;
 
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
@@ -29,15 +31,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
-            builder.setStatus(Status.OK);
+
+            CamJoinResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }
         catch(SauronException e) {
-            builder.setStatus(reactToException(e));
+            reactToException(e, responseObserver);
         }
-
-        CamJoinResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -45,17 +46,15 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         CamInfoResponse.Builder builder = CamInfoResponse.newBuilder();
         try {
             SauronCamera cam = silo.getCamByName(request.getName());
-            builder.setStatus(Status.OK);
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
+
+            CamInfoResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }
         catch (SauronException e) {
-            builder.setStatus(reactToException(e));
+            reactToException(e, responseObserver);
         }
-
-        CamInfoResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-
     }
 
     @Override
@@ -68,23 +67,28 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             cam = null;
         }
         List<Object> objects = request.getObjectList();
-        builder.setStatus(cam == null ? Status.INEXISTENT_CAMERA : Status.OK);
-        for(Object obj: objects) {
-            if (cam == null) break;
-
+        if (cam == null) {
+            responseObserver.onError(NOT_FOUND
+                    .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
+        }
+        else {
+            boolean error = false;
             try {
-                SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
-                SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
-                silo.addObservation(observation);
+                for(Object obj: objects) {
+                    SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
+                    SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
+                    silo.addObservation(observation);
+                }
+            } catch (SauronException e) {
+                error = true;
+                reactToException(e, responseObserver);
             }
-            catch(SauronException e) {
-                builder.setStatus(reactToException(e));
+            if (!error) {
+                ReportResponse response = builder.build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
             }
         }
-
-        ReportResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -93,15 +97,15 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             SauronObservation sauObs = silo.track(getObjectType(request.getType()), request.getId());
 
-            builder.setObservation(buildObs(sauObs)).setStatus(Status.OK);
+            builder.setObservation(buildObs(sauObs));
+
+            TrackResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
 
         } catch (SauronException e) {
-            builder.setStatus(reactToException(e));
+            reactToException(e, responseObserver);
         }
-
-        TrackResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -112,17 +116,18 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             List<SauronObservation> sauObs = silo.trackMatch(getObjectType(request.getType()), request.getId());
 
             if (sauObs.isEmpty())
-                builder.setStatus(Status.OBJECT_NOT_FOUND);
-            else
-                builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()))
-                        .setStatus(Status.OK);
-        } catch (SauronException e) {
-            builder.setStatus(reactToException(e));
-        }
+                responseObserver.onError(NOT_FOUND
+                        .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
+            else {
+                builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
 
-        TrackMatchResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+                TrackMatchResponse response = builder.build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
+        } catch (SauronException e) {
+            reactToException(e, responseObserver);
+        }
     }
 
     @Override
@@ -132,16 +137,15 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         try {
             List<SauronObservation> sauObs = silo.trace(getObjectType(request.getType()), request.getId());
 
-            builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()))
-                    .setStatus(Status.OK);
+            builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
+
+            TraceResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
 
         } catch (SauronException e) {
-            builder.setStatus(reactToException(e));
+            reactToException(e, responseObserver);
         }
-
-        TraceResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -149,22 +153,23 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         PingResponse.Builder builder = PingResponse.newBuilder();
         String input = request.getInput();
         if (input == null || input.isBlank()) {
-            builder.setStatus(Status.INVALID_ARGUMENT);
+            responseObserver.onError(INVALID_ARGUMENT
+                    .withDescription("INVALID_ARGUMENT").asRuntimeException());
         } else {
             String output = "Hello " + request.getInput() + "!";
-            builder.setOutput(output).setStatus(Status.OK);
-        }
+            builder.setOutput(output);
 
-        PingResponse response = builder.build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+            PingResponse response = builder.build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        }
     }
 
     @Override
     public void ctrlClear(ClearRequest request, StreamObserver<ClearResponse> responseObserver) {
         silo.clear();
 
-        ClearResponse response = ClearResponse.newBuilder().setStatus(Status.OK).build();
+        ClearResponse response = ClearResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
@@ -198,26 +203,43 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         }
     }
 
-    private Status reactToException(SauronException e) {
+    private <T> void reactToException(SauronException e, StreamObserver<T> so) {
         switch(e.getErrorMessage()) {
             case DUPLICATE_CAMERA:
-                return Status.DUPLICATE_CAMERA;
+                so.onError(ALREADY_EXISTS
+                        .withDescription("DUPLICATE_CAMERA").asRuntimeException());
+                break;
             case DUPLICATE_CAM_NAME:
-                return Status.DUPLICATE_CAM_NAME;
+                so.onError(ALREADY_EXISTS
+                        .withDescription("DUPLICATE_CAM_NAME").asRuntimeException());
+                break;
             case INVALID_COORDINATES:
-                return Status.INVALID_COORDINATES;
+                so.onError(INVALID_ARGUMENT
+                        .withDescription("INVALID_COORDINATES").asRuntimeException());
+                break;
             case INVALID_CAM_NAME:
-                return Status.INVALID_NAME;
-            case OBJECT_NOT_FOUND:
-                return Status.OBJECT_NOT_FOUND;
+                so.onError(INVALID_ARGUMENT
+                        .withDescription("INVALID_CAM_NAME").asRuntimeException());
+                break;
             case INVALID_PERSON_IDENTIFIER:
+                so.onError(INVALID_ARGUMENT
+                        .withDescription("INVALID_PERSON_IDENTIFIER").asRuntimeException());
+                break;
             case INVALID_CAR_ID:
-            case INVALID_ID:
-                return Status.INVALID_ID;
+                so.onError(INVALID_ARGUMENT
+                        .withDescription("INVALID_CAR_ID").asRuntimeException());
+                break;
+            case OBJECT_NOT_FOUND:
+                so.onError(NOT_FOUND
+                        .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
+                break;
             case TYPE_DOES_NOT_EXIST:
-                return Status.INVALID_TYPE;
+                so.onError(NOT_FOUND
+                        .withDescription("TYPE_DOES_NOT_EXIST").asRuntimeException());
+                break;
             default:
-                return Status.UNRECOGNIZED;
+                so.onError(UNKNOWN
+                        .withDescription("UNKNOWN").asRuntimeException());
         }
     }
 
