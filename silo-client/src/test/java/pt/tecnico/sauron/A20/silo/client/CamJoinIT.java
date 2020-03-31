@@ -63,7 +63,8 @@ public class CamJoinIT extends BaseIT{
                 Assertions.assertNotEquals(lat, coords[0]);
                 Assertions.assertNotEquals(lon, coords[1]);
             } catch (SauronException e) {
-                Assertions.assertEquals(ErrorMessage.CAMERA_NOT_FOUND, e.getErrorMessage());
+                Assertions.assertTrue(e.getErrorMessage() == ErrorMessage.CAMERA_NOT_FOUND
+                        || e.getErrorMessage() == ErrorMessage.INVALID_CAM_NAME);
             }
         }
     }

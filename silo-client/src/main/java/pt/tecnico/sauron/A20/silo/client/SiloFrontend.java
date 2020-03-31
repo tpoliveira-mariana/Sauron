@@ -3,6 +3,7 @@ package pt.tecnico.sauron.A20.silo.client;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
@@ -34,8 +35,9 @@ public class SiloFrontend {
             CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
 
             _stub.camJoin(request);
-        } catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+        }
+        catch (StatusRuntimeException e) {
+            throw properException(e);
         }
     }
 
@@ -49,8 +51,9 @@ public class SiloFrontend {
             CamInfoResponse response = _stub.camInfo(request);
 
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
-        } catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+        }
+        catch (StatusRuntimeException e) {
+            throw properException(e);
         }
     }
 
@@ -68,7 +71,7 @@ public class SiloFrontend {
             _stub.report(request);
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -83,7 +86,7 @@ public class SiloFrontend {
             return printObservation(response.getObservation());
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
 
     }
@@ -103,7 +106,7 @@ public class SiloFrontend {
                     .collect(Collectors.toList());
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -120,8 +123,7 @@ public class SiloFrontend {
                     .collect(Collectors.toList());
         }
         catch (StatusRuntimeException e) {
-            System.out.println(e.getStatus());
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -133,7 +135,7 @@ public class SiloFrontend {
             return response.getOutput();
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
 
@@ -143,10 +145,9 @@ public class SiloFrontend {
             _stub.ctrlClear(request);
         }
         catch (StatusRuntimeException e) {
-            throw reactToStatus(e.getStatus().getDescription());
+            throw properException(e);
         }
     }
-
 
     public void ctrlInit(String fileName) throws SauronException {
         try {
@@ -201,8 +202,9 @@ public class SiloFrontend {
     }
 
     private Comparator<Observation> getComparator(TrackMatchResponse response) {
-        ObjectType type = response.getObservationsCount() == 0 ? ObjectType.CAR : response.getObservations(0).getObject().getType();
-        switch (type){
+        ObjectType type = response.getObservationsCount() == 0 ?
+                ObjectType.CAR : response.getObservations(0).getObject().getType();
+        switch (type) {
             case PERSON:
                 return Comparator.comparingLong(obs -> Long.parseLong(obs.getObject().getId()));
             case CAR:
@@ -210,7 +212,13 @@ public class SiloFrontend {
             default:
                 return Comparator.comparing(Observation::toString);
         }
+    }
 
+    private SauronException properException(StatusRuntimeException e) {
+        if (e.getStatus().getCode().equals(Status.Code.UNAVAILABLE)) {
+            return new SauronException(REFUSED);
+        }
+        return reactToStatus(e.getStatus().getDescription());
     }
 
     private SauronException reactToStatus(String msg) {

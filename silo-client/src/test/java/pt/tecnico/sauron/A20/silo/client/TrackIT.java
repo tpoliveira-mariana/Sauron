@@ -105,7 +105,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void traceNOK_invalidCarId() {
+    public void trackNOKInvalidCarId() {
         try {
             String result = frontend.track(CAR_TYPE, INVALID_CAR_ID);
             Assertions.assertTrue(result.isEmpty());
@@ -116,7 +116,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void traceNOK_invalidPersonId() {
+    public void trackNOKInvalidPersonId() {
         try {
             String result = frontend.track(PERSON_TYPE, INVALID_PERSON_ID);
             Assertions.assertTrue(result.isEmpty());
@@ -127,7 +127,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void traceNOK_PersonId() {
+    public void trackNOKPersonId() {
         try {
             String result = frontend.track(PERSON_TYPE, INEXISTENT_PERSON_ID);
             Assertions.assertTrue(result.isEmpty());
@@ -138,7 +138,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void traceNOK_CarId() {
+    public void trackNOKCarId() {
         try {
             String result = frontend.track(CAR_TYPE, INEXISTENT_CAR_ID);
             Assertions.assertTrue(result.isEmpty());
@@ -149,7 +149,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void traceNOK_Type() {
+    public void trackNOKType() {
         try {
             String result = frontend.track(INEXISTENT_TYPE, PERSON_ID);
             Assertions.assertTrue(result.isEmpty());

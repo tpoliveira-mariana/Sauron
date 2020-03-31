@@ -7,7 +7,6 @@ import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
-import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.client.SiloFrontend;
 
@@ -35,56 +34,59 @@ public class EyeApp {
 			return ;
 		}
 
-		final String host = args[0];
-		final int port = Integer.parseInt(args[1]);
-		_frontend = new SiloFrontend(host, Integer.toString(port));
-
-		String cameraName = args[2];
-		double lat, lon;
-
 		try {
+			final String host = args[0];
+			final int port = Integer.parseInt(args[1]);
+			_frontend = new SiloFrontend(host, Integer.toString(port));
+
+			String cameraName = args[2];
+			double lat, lon;
 			lat = Double.parseDouble(args[3]);
 			lon = Double.parseDouble(args[4]);
-		}
-		catch (Exception e) {
-			shutDownMessage("Invalid double provided.");
-			return ;
-		}
 
-		processCameraObservations(cameraName, lat, lon);
+			processCameraObservations(cameraName, lat, lon);
+		}
+		catch (NumberFormatException e) {
+			shutDownMessage("Invalid number provided.");
+		}
 	}
 
 	private static void processCameraObservations(String cameraName, double lat, double lon) {
 		if (registerCamera(cameraName, lat, lon)) {
-
+			int[] info = {0, 0};
 			try (Scanner scanner = new Scanner(System.in)) {
 				List<List<String>> observations = new ArrayList<>();
 
 				while (scanner.hasNextLine()) {
 					String line = scanner.nextLine();
-					if (!handledSpecialLine(cameraName, line, observations)) {
+					if (!handledSpecialLine(cameraName, line, observations, info)) {
 						StringTokenizer st = new StringTokenizer(line, ",");
 						if (st.countTokens() != 2) {
+							info[1]++;
 							skipMessage("Invalid command.");
 							continue;
 						}
-						processObservation(observations, st);
+						processObservation(observations, st, info);
 					}
 				}
 
+				int count_obs = observations.size();
 				submitObservations(cameraName, observations);
+				info[0] += count_obs;
+
+				printReport(info);
 
 			} catch (Exception e) {
-				System.out.println(e.getMessage());
+				shutDownMessage("An unexpected error occurred.");
 			}
 		}
 	}
 
-	private static void processObservation(List<List<String>> observations, StringTokenizer st) {
+	private static void processObservation(List<List<String>> observations, StringTokenizer st, int[] info) {
 		String objectType = st.nextToken();
 		String objectId = st.nextToken();
 
-		if (checkObsArguments(objectType, objectId)) {
+		if (checkObsArguments(objectType, objectId, info)) {
 			addObservation(observations, objectType, objectId);
 		}
 	}
@@ -122,11 +124,13 @@ public class EyeApp {
 		}
 	}
 
-	private static boolean handledSpecialLine(String camName, String line, List<List<String>> observations) {
+	private static boolean handledSpecialLine(String camName, String line, List<List<String>> observations, int[] info) {
 		// blank line
 		if (line.isBlank()) {
 			if (!observations.isEmpty()) {
+				int count_obs = observations.size();
 				submitObservations(camName, observations);
+				info[0] += count_obs;
 			}
 			return true;
 		}
@@ -138,6 +142,7 @@ public class EyeApp {
 		else if (line.startsWith("zzz")) {
 			StringTokenizer st = new StringTokenizer(line, ",");
 			if (st.countTokens() != 2) {
+				info[1]++;
 				skipMessage("Invalid command.");
 				return true;
 			}
@@ -149,6 +154,7 @@ public class EyeApp {
 
 			}
 			catch (NumberFormatException ne) {
+				info[1]++;
 				skipMessage("Invalid command.");
 			}
 			catch (InterruptedException ie) {
@@ -166,18 +172,20 @@ public class EyeApp {
 		}
 		catch (SauronException e) {
 			System.out.println(e.getErrorMessageLabel());
-			shutDownMessage("Observations not submitted.");
+			shutDownMessage("Observation not submitted.");
 		}
 
 	}
 
-	private static boolean checkObsArguments(String type, String id) {
+	private static boolean checkObsArguments(String type, String id, int[] info) {
 		if (!type.equals(CAR)  && !type.equals(PERSON)) {
-			System.out.println("Invalid object type provided.");
+			info[1]++;
+			skipMessage("Invalid object type provided.");
 			return false;
 		}
 		else if ((type.equals(CAR) && !checkCarId(id)) || (type.equals(PERSON) && !checkPersonId(id))) {
-			System.out.println(String.format("Invalid %s identifier provided.", type));
+			info[1]++;
+			skipMessage(String.format("Invalid %s identifier provided.", type));
 			return false;
 		}
 
@@ -225,6 +233,13 @@ public class EyeApp {
 	private static void shutDownMessage(String msg) {
 		System.out.println(msg);
 		System.out.println("Shutting down...");
+	}
+
+	private static void printReport(int[] info) {
+		System.out.println("\n----------REPORT----------");
+		System.out.printf("Sent:      %d\n", info[0]);
+		System.out.printf("Skipped:   %d\n", info[1]);
+
 	}
 
 
