@@ -9,7 +9,8 @@ import pt.tecnico.sauron.A20.exceptions.*;
 public class Silo {
 
     private Map<String, SauronCamera> _cams = new HashMap<>();
-    private Map<SauronObject, List<SauronObservation>> _objs = new HashMap<>();
+    private Map<String, SauronObject> _objs = new HashMap<>();
+    private Map<SauronObject, List<SauronObservation>> _obs = new HashMap<>();
 
 
     public Silo() { }
@@ -19,12 +20,13 @@ public class Silo {
     }
 
     public Map<SauronObject, List<SauronObservation>> getObjects() {
-        return _objs;
+        return _obs;
     }
 
     public void clear() {
         _cams.clear();
         _objs.clear();
+        _obs.clear();
     }
 
     public void addCamera(SauronCamera cam) throws SauronException {
@@ -40,12 +42,28 @@ public class Silo {
 
     }
 
+    public void addObject(SauronObject obj) {
+        _objs.put(obj.getType()+obj.getId(), obj);
+    }
+
+    public SauronObject addObject(String type, String id) throws SauronException {
+        SauronObject sauObj = createNewObject(type, id);
+        String key = type + id;
+        _objs.put(key, sauObj);
+        return sauObj;
+    }
+
+    public SauronObject getObject(String type, String id) {
+        String key = type + id;
+        return _objs.get(key);
+    }
+
     public void addObservation(SauronObservation obs) {
-        List<SauronObservation> lstObs = _objs.get(obs.getObject());
+        List<SauronObservation> lstObs = _obs.get(obs.getObject());
         if (lstObs == null) {
             lstObs = new ArrayList<>();
             lstObs.add(obs);
-            _objs.put(obs.getObject(), lstObs);
+            _obs.put(obs.getObject(), lstObs);
         } else {
             lstObs.add(obs);
         }
@@ -57,14 +75,6 @@ public class Silo {
         if (cam == null)
             throw new SauronException(ErrorMessage.CAMERA_NOT_FOUND);
         return cam;
-    }
-
-    public SauronObject getObjectByTypeAndId(String type, String id) throws SauronException {
-        Optional<SauronObject> obj = _objs.keySet().stream().filter(object -> object.getType().equals(type) && object.getId().equals(id)).findFirst();
-        if (obj.isEmpty()) {
-            return createNewObject(type, id);
-        }
-        return obj.get();
     }
 
     public SauronObject createNewObject(String type, String id) throws SauronException {
@@ -80,7 +90,7 @@ public class Silo {
 
     public SauronObservation track(String type, String id) throws SauronException {
         SauronObject object = createNewObject(type, id);
-        List<SauronObservation> sauObs = _objs.get(object);
+        List<SauronObservation> sauObs = _obs.get(object);
         if (sauObs == null)
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 
@@ -89,16 +99,16 @@ public class Silo {
 
     public List<SauronObservation> trackMatch(String type, String parcId) throws SauronException {
         String regex = buildRegex(parcId);
-        return _objs.keySet()
+        return _obs.keySet()
                 .stream()
                 .filter(obj -> obj.getId().matches(regex) && obj.getType().equals(type))
-                .map(obj -> _objs.get(obj).get(_objs.get(obj).size()-1))
+                .map(obj -> _obs.get(obj).get(_obs.get(obj).size()-1))
                 .collect(Collectors.toList());
     }
 
     public List<SauronObservation> trace(String type, String id) throws SauronException {
         SauronObject object = createNewObject(type, id);
-        List<SauronObservation> sauObs = _objs.get(object);
+        List<SauronObservation> sauObs = _obs.get(object);
         if (sauObs == null)
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 

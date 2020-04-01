@@ -11,7 +11,6 @@ import pt.tecnico.sauron.A20.silo.domain.SauronCamera;
 import pt.tecnico.sauron.A20.silo.domain.Silo;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
-import io.grpc.Status.*;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
@@ -75,7 +74,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
             boolean error = false;
             try {
                 for(Object obj: objects) {
-                    SauronObject sauObj = silo.getObjectByTypeAndId(getObjectType(obj.getType()), obj.getId());
+                    String type = getObjectType(obj.getType());
+                    SauronObject sauObj = silo.getObject(type, obj.getId());
+                    if (sauObj == null)
+                        sauObj = silo.addObject(type, obj.getId());
+
                     SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
                     silo.addObservation(observation);
                 }
