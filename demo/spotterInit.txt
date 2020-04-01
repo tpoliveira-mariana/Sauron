@@ -1,0 +1,5 @@
+cam,Alameda,15.234,71.983
+person,151
+car,AABB33
+person,1331
+done
