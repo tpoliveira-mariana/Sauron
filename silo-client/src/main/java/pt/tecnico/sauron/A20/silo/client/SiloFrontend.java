@@ -235,8 +235,8 @@ public class SiloFrontend {
                 return new SauronException(CAMERA_NOT_FOUND);
             case "INVALID_COORDINATES":
                 return new SauronException(INVALID_COORDINATES);
-            case "INVALID_PERSON_IDENTIFIER":
-                return new SauronException(INVALID_PERSON_IDENTIFIER);
+            case "INVALID_PERSON_ID":
+                return new SauronException(INVALID_PERSON_ID);
             case "INVALID_CAR_ID":
                 return new SauronException(INVALID_CAR_ID);
             case "INVALID_ID":

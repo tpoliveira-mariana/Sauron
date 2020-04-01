@@ -98,7 +98,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_1, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_PERSON_IDENTIFIER,
+                ErrorMessage.INVALID_PERSON_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -111,7 +111,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_2, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_PERSON_IDENTIFIER,
+                ErrorMessage.INVALID_PERSON_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)
@@ -124,7 +124,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", INVALID_PERSON_ID_3, obs);
         Assertions.assertEquals(
-                ErrorMessage.INVALID_PERSON_IDENTIFIER,
+                ErrorMessage.INVALID_PERSON_ID,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(CAM_NAME_1, obs)

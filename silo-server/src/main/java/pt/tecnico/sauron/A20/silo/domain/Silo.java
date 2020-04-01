@@ -1,6 +1,7 @@
 package pt.tecnico.sauron.A20.silo.domain;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import pt.tecnico.sauron.A20.exceptions.*;
@@ -8,9 +9,9 @@ import pt.tecnico.sauron.A20.exceptions.*;
 
 public class Silo {
 
-    private Map<String, SauronCamera> _cams = new HashMap<>();
-    private Map<String, SauronObject> _objs = new HashMap<>();
-    private Map<SauronObject, List<SauronObservation>> _obs = new HashMap<>();
+    private Map<String, SauronCamera> _cams = new ConcurrentHashMap<>();
+    private Map<String, SauronObject> _objs = new ConcurrentHashMap<>();
+    private Map<SauronObject, List<SauronObservation>> _obs = new ConcurrentHashMap<>();
 
 
     public Silo() { }

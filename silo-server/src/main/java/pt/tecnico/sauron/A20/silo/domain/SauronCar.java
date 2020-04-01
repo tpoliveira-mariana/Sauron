@@ -13,8 +13,7 @@ public class SauronCar extends SauronObject {
         setId(id);
     }
 
-    @Override
-    protected void checkId(String id) throws SauronException {
+    public static void checkId(String id) throws SauronException {
         int numFields = 0;
         if (id.length() != 6)
             throw new SauronException(INVALID_CAR_ID);
@@ -29,8 +28,6 @@ public class SauronCar extends SauronObject {
         if (numFields == 3 || numFields == 0) {
             throw new SauronException(INVALID_CAR_ID);
         }
-
-        return;
     }
 
     @Override

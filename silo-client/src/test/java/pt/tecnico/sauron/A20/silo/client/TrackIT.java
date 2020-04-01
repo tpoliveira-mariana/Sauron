@@ -8,7 +8,6 @@ import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,7 +121,7 @@ public class TrackIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_IDENTIFIER, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
         }
     }
 

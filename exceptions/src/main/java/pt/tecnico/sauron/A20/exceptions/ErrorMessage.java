@@ -8,7 +8,7 @@ public enum ErrorMessage {
     INVALID_COORDINATES("Invalid coordinates provided."),
     INVALID_CAM_NAME("Invalid camera name provided."),
     INVALID_CAR_ID("Invalid car identifier provided."),
-    INVALID_PERSON_IDENTIFIER("Invalid person identifier provided."),
+    INVALID_PERSON_ID("Invalid person identifier provided."),
     CAMERA_NOT_FOUND("Camera not found."),
     TYPE_DOES_NOT_EXIST("The type does not exist."),
     INVALID_ID("Invalid identifier provided."),

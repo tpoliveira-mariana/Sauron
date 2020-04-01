@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 
 public class TrackMatchIT extends BaseIT{
     private static final String HOST = "localhost";
@@ -186,7 +185,7 @@ public class TrackMatchIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_IDENTIFIER, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
         }
     }
 
