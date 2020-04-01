@@ -54,12 +54,12 @@ public class TrackMatchIT extends BaseIT{
 
     @AfterAll
     public static void oneTimeTearDown() {
-        /*try {
+        try {
             frontend.ctrlClear();
         }
         catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());
-        }*/
+        }
     }
 
     // tests
@@ -150,7 +150,7 @@ public class TrackMatchIT extends BaseIT{
         observation.add(PERSON_ID_5);
         observations.add(observation);
 
-        Thread.sleep(5000); // test needs to sleep in order to compare the times
+        Thread.sleep(1000); // test needs to sleep in order to compare the times
         frontend.report(CAM_ALAMEDA, observations);
 
         result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
@@ -175,7 +175,7 @@ public class TrackMatchIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_ID, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
         }
     }
 
@@ -186,7 +186,7 @@ public class TrackMatchIT extends BaseIT{
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_ID, e.getErrorMessage());
+            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_IDENTIFIER, e.getErrorMessage());
         }
     }
 
@@ -226,7 +226,6 @@ public class TrackMatchIT extends BaseIT{
     private void checkResults(List<String> output, List<String> cams, List<String> lats, List<String> longs, String type, List<String> ids) throws SauronException {
         int i = 0;
         for (String r : output) {
-            System.out.println(r);
             String[] results = r.split(",");
             Assertions.assertEquals(6, results.length);
             Assertions.assertEquals(type, results[0]);

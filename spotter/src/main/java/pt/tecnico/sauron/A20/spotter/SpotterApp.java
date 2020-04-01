@@ -240,6 +240,10 @@ public class SpotterApp {
 		switch(e.getErrorMessage()) {
 			case OBJECT_NOT_FOUND:
 				return "Object does not exists";
+			case INVALID_PERSON_IDENTIFIER:
+				return "Invalid person ID given";
+			case INVALID_CAR_ID:
+				return "Invalid car ID given";
 			case INVALID_ID:
 				return "Invalid ID given";
 			case TYPE_DOES_NOT_EXIST:
