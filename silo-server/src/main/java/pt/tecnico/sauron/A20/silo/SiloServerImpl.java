@@ -72,8 +72,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         }
         else {
             boolean error = false;
-            try {
-                for(Object obj: objects) {
+            for(Object obj: objects) {
+                try {
                     String type = getObjectType(obj.getType());
                     SauronObject sauObj = silo.getObject(type, obj.getId());
                     if (sauObj == null)
@@ -81,10 +81,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
 
                     SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
                     silo.addObservation(observation);
+                } catch (SauronException e) {
+                    if (!error)
+                        reactToException(e, responseObserver);
+                    error = true;
                 }
-            } catch (SauronException e) {
-                error = true;
-                reactToException(e, responseObserver);
             }
             if (!error) {
                 ReportResponse response = builder.build();
@@ -98,6 +99,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     public void track(TrackRequest request, StreamObserver<TrackResponse> responseObserver) {
         TrackResponse.Builder builder = TrackResponse.newBuilder();
         try {
+            checkObjectArguments(getObjectType(request.getType()), request.getId(), false);
             SauronObservation sauObs = silo.track(getObjectType(request.getType()), request.getId());
 
             builder.setObservation(buildObs(sauObs));
@@ -116,6 +118,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         TrackMatchResponse.Builder builder = TrackMatchResponse.newBuilder();
 
         try {
+            checkObjectArguments(getObjectType(request.getType()), request.getId(), true);
             List<SauronObservation> sauObs = silo.trackMatch(getObjectType(request.getType()), request.getId());
 
             if (sauObs.isEmpty())
@@ -138,6 +141,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         TraceResponse.Builder builder = TraceResponse.newBuilder();
 
         try {
+            checkObjectArguments(getObjectType(request.getType()), request.getId(), false);
             List<SauronObservation> sauObs = silo.trace(getObjectType(request.getType()), request.getId());
 
             builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
@@ -248,6 +252,60 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
                 so.onError(UNKNOWN
                         .withDescription("UNKNOWN").asRuntimeException());
         }
+    }
+
+    private static boolean checkObjectArguments(String type, String id, boolean regex) throws SauronException{
+        String PERSON = "person";
+        String CAR = "car";
+        if (!type.equals(CAR)  && !type.equals(PERSON)) {
+            throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
+        }
+        else return (!type.equals(CAR) || checkCarId(id, regex)) && (!type.equals(PERSON) || checkPersonId(id, regex));
+
+    }
+
+    private static boolean checkCarId(String id, boolean regex) throws SauronException{
+        int numFields = 0;
+        if (!id.contains("*")) { //check if string contains *
+            if (id.length() != 6)
+                throw new SauronException(ErrorMessage.INVALID_CAR_ID);
+
+            for (int i = 0; i < 3; i++) {
+                char firstChar = id.charAt(2 * i);
+                char secChar = id.charAt(2 * i + 1);
+
+                if (Character.isDigit(firstChar) && Character.isDigit(secChar))
+                    numFields++;
+
+                else if (!(Character.isUpperCase(firstChar) && Character.isUpperCase(secChar)))
+                    throw new SauronException(ErrorMessage.INVALID_CAR_ID);
+            }
+            if(numFields == 3 || numFields == 0)
+                throw new SauronException(ErrorMessage.INVALID_CAR_ID);
+        }
+        else{
+            if(regex && id.length() > 6 || id.matches(".*[*][*]+.*"))
+                throw new SauronException(ErrorMessage.INVALID_CAR_ID);
+        }
+        return true;
+
+    }
+
+    private static boolean checkPersonId(String id, boolean regex) throws SauronException{
+        try{
+            if (!id.matches("[0-9*]+") || id.matches(".*[*][*]+.*") || (id.contains("*") && !regex)) {
+                throw new SauronException(ErrorMessage.INVALID_PERSON_IDENTIFIER); //check if id doesn't match a number or if it doesn't have sequenced * or if it has * and regex is not possible
+            }
+            if (!id.contains("*")) { //check if string doesn't contain *
+                Long.parseLong(id);
+                if(Long.parseLong(id) < 0)
+                    throw new SauronException(ErrorMessage.INVALID_PERSON_IDENTIFIER);
+            }
+        }
+        catch(NumberFormatException e){
+            throw new SauronException(ErrorMessage.INVALID_PERSON_IDENTIFIER);
+        }
+        return true;
     }
 
 }
