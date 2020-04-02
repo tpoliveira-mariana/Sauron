@@ -13,6 +13,5 @@ person,4
 car,22BB33
 car,113A22
 
-# Expected Report:
-# Sent: 5
-# Skipped: 2
+# Expected:
+# Invalid person identifier provided.

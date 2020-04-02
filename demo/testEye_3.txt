@@ -1,20 +1,26 @@
 # Register 9 observations with invalid arguments
 
-# 1st batch
+# 1st set
 dog,123
 person,aabk
+
+# 2nd set
 person,-6841
 person,5454546486465454654654531354453518432138431354695
 
 zzz,2000
 
-#2nd batch
+# 3rd set
 car,1
 car,112233
-car,1234567
-car,aa11BB
-car,AACCBB
+person,A1234567
 
-# Expected Report:
-# Sent: 0
-# Skipped: 9
+# 4th set
+car,aa11BB
+dog,AACCBB
+
+# Expected:
+# The type does not exist.
+# Invalid person identifier provided.
+# Invalid car identifier provided.
+# Invalid car identifier provided.
