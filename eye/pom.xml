@@ -9,6 +9,8 @@
 		<version>1.0.0-SNAPSHOT</version>
 	</parent>
 
+
+
 	<artifactId>eye</artifactId>
 	<packaging>jar</packaging>
 	<name>${project.artifactId}</name>
@@ -70,9 +72,10 @@
 					</execution>
 				</executions>
 				<configuration>
+					<killAfter>-1</killAfter>
+					<cleanupDaemonThreads>false</cleanupDaemonThreads>
 					<mainClass>${mainclass}</mainClass>
 					<arguments>
-
 					</arguments>
 				</configuration>
 			</plugin>

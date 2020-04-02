@@ -1,13 +1,12 @@
 ### Sauron Usage Guide
 
-
 #### Launch ServerApp
 ```
 $ cd silo-server
-$ mvn compile exec:java
+$ mvn compile exec:java -Dexec.args="[port]"
 ```
-
-Server runs on port 8080 by default.
+To launch server on port `[port]`.
+If you choose to not include `-Dexec.args="[port]"`, the server will run on port 8080 by default.
 
 With the server running, any of the following clients can be concurrently launched in a separate terminal,
  for example by pressing `ctrl-shift-t`, and proceed as follows:
@@ -17,21 +16,52 @@ With the server running, any of the following clients can be concurrently launch
 #### Launch EyeApp
 ```
 $ cd ../eye
-$ ./target/appassembler/bin/eye [host] [port] [camera name] [latitude] [longitude]
+$ mvn compile exec:java -Dexec.args="[host] [port] [camera name] [latitude] [longitude]"
 ```
 For example, to launch the EyeApp and connect it to the server on localhost:8080 using a camera named Tagus, 
 located at (38.737613 -9.403164) use:
 
 ```
 $ cd ../eye
-$ ./target/appassembler/bin/eye localhost 8080 Tagus 38.737613 -9.403164
+$ mvn compile exec:java -Dexec.args="localhost 8080 Tagus 38.737613 -9.403164"
 ```
+After launching EyeApp you can submit observations as follows: 
+You can add an observation as follows:
+```
+[type],[ID]
+```
+##### **Type and ID rules:**    
+    
+The type must be either `car` or `person`. 
+- Car
 
+    1. ID is its license plate number which must have 6 characters
+    2. The ID must have 3 subgroups of 2 characters each
+    3. Each subgroup can only be of capital letters or numbers
+    4. There cannot be 3 subgroups of letters or numbers simultaneously
+    
+- Person
+    1. ID must be a positive integer
+    
+Each observation, as well as each new command of the following, must be in a new line. 
+
+##### **Comments:** 
+Comment lines, which will be ignored, start with `#`.
+
+##### **Sleep:** 
+
+You can also make the Eye sleep for a certain amount of time by typing `zzz,[milliseconds]` between observations.
+
+##### **Submission:** 
+When a blank line is detected, the observations above it will be submitted. 
+Another way of submitting them is by closing the standard input.
+
+##### **Input redirection:** 
 If you want, you may redirect the input from a file of your choice:
 
 ```
 $ cd ../eye
-$ ./target/appassembler/bin/eye localhost 8080 Tagus 38.737613 -9.403164 < ../demo/testEye_1.txt
+$ mvn compile exec:java -Dexec.args="localhost 8080 Tagus 38.737613 -9.403164" < ../demo/testEye_1.txt
 ```
 For testing purposes, you can run multiple scenarios using the different `testEye_X.txt` files.
 
@@ -41,14 +71,14 @@ For testing purposes, you can run multiple scenarios using the different `testEy
 
 ```
 $ cd ../spotter
-$ ./target/appassembler/bin/spotter [host] [port]
+$ mvn compile exec:java -Dexec.args="[host] [port]"
 ```
 
 For example, to launch the SpotterApp and connect it to the server on localhost:8080
 
 ```
 $ cd ../spotter
-$ ./target/appassembler/bin/spotter localhost 8080
+$ mvn compile exec:java -Dexec.args="localhost 8080"
 ```
 
 After launching the spotter app the following commands are available to you:
@@ -128,6 +158,8 @@ After launching the spotter app the following commands are available to you:
     Note: This command needs the exact ID, therefore the ID cannot contain the `*` character.
 
 ##### **Type and ID rules:**    
+
+The same rules of the EyeApp apply here.
     
 The type must be either `car` or `person`. 
 - Car
@@ -161,7 +193,7 @@ To create your own init file:
 #### Launch ClientApp
 ```
 $ cd ../silo-client
-$ ./target/appassembler/bin/silo-client [host] [port]
+$ mvn compile exec:java -Dexec.args="[host] [port]"
 ```
 The SiloClientApp's single function is to ping the server.
 The app sends `SiloClientApp` as message, to which the server should reply with `Hello SiloClientApp!`.
@@ -170,7 +202,7 @@ For example, to launch the SiloClientApp on localhost:8080 use:
 
 ```
 $ cd ../silo-client
-$ ./target/appassembler/bin/silo-client localhost 8080
+$ mvn compile exec:java -Dexec.args="localhost 8080"
 ```
 
 ---

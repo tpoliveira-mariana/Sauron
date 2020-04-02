@@ -68,9 +68,12 @@ public class EyeApp {
 				}
 
 				int count_obs = observations.size();
-				submitObservations(cameraName, observations);
-				info[0] += count_obs;
+				if (count_obs > 0) {
+					submitObservations(cameraName, observations);
+					info[0] += count_obs;
+				}
 
+				scanner.close();
 				printReport(info);
 
 			} catch (Exception e) {

@@ -2,3 +2,7 @@
 
 person,1
 car,11AA22
+
+# Expected Report:
+# Sent: 2
+# Skipped: 0

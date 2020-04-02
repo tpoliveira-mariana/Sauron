@@ -1,0 +1,18 @@
+# Register 2 observations followed by other 3, 3 seconds later
+
+# 1st set
+person,1
+car,11AA22
+
+zzz,2000
+
+# 2nd set
+person,2
+person,XPTO
+person,4
+car,22BB33
+car,113A22
+
+# Expected Report:
+# Sent: 5
+# Skipped: 2

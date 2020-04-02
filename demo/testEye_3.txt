@@ -1,4 +1,4 @@
-# Register observations with invalid arguments
+# Register 9 observations with invalid arguments
 
 # 1st batch
 dog,123
@@ -14,3 +14,7 @@ car,112233
 car,1234567
 car,aa11BB
 car,AACCBB
+
+# Expected Report:
+# Sent: 0
+# Skipped: 9
