@@ -124,7 +124,7 @@ After launching the spotter app the following commands are available to you:
     
     The spot command is a command that allows you to search for the last observation registered on the object of the type and ID given.
     
-    There are some rules for the type and ID (see the subsection `Type and ID rules`).
+    There are some rules for the type and ID (see the previous subsection `Type and ID rules` in the `Launch EyeApp` section).
         
     For example, to search for the car with ID `AABB33` use:
     
@@ -151,33 +151,21 @@ After launching the spotter app the following commands are available to you:
     trail [type] [ID]
     ```
   
-    The trail command is a command that allows you to search for every observation registered on the object of the type and id given.
+    The trail command is a command that allows you to search for every observation registered on the object of the type and ID given.
     
     The output comes in the same format as the command before.
     
-    Note: This command needs the exact ID, therefore the ID cannot contain the `*` character.
-
-##### **Type and ID rules:**    
-
-The same rules of the EyeApp apply here.
+    The same rules to ID as before apply to this command (see the previous subsection `Type and ID rules` in the `Launch EyeApp` section).
     
-The type must be either `car` or `person`. 
-- Car
-
-    1. ID is its number plate which must have 6 characters
-    2. The ID must have 3 subgroups of 2 characters each
-    3. Each subgroup can only be of capital letters or numbers
-    4. There cannot be 3 subgroups of letters or numbers simultaneously
+    Note: This command needs the exact ID, therefore the ID cannot contain the `*` character. 
     
-- Person
-    1. ID must be a positive number
     
 ##### **Creating your own server init file:**
 
 To create your own init file:
 - To create a camera write
     ```
-    cam,[camera latitude],[camera longitude]
+    cam,[camera name],[camera latitude],[camera longitude]
     ```
 - To create an observation write
     ```
