@@ -105,57 +105,32 @@ public class TrackIT extends BaseIT{
 
     @Test
     public void trackNOKInvalidCarId() {
-        try {
-            String result = frontend.track(CAR_TYPE, INVALID_CAR_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
-        }
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(CAR_TYPE, INVALID_CAR_ID));
+        Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
     }
 
     @Test
     public void trackNOKInvalidPersonId() {
-        try {
-            String result = frontend.track(PERSON_TYPE, INVALID_PERSON_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
-        }
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(PERSON_TYPE, INVALID_PERSON_ID));
+        Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
     }
 
     @Test
     public void trackNOKPersonId() {
-        try {
-            String result = frontend.track(PERSON_TYPE, INEXISTENT_PERSON_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
-        }
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(PERSON_TYPE, INEXISTENT_PERSON_ID));
+        Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
     public void trackNOKCarId() {
-        try {
-            String result = frontend.track(CAR_TYPE, INEXISTENT_CAR_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
-        }
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(CAR_TYPE, INEXISTENT_CAR_ID));
+        Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
     public void trackNOKType() {
-        try {
-            String result = frontend.track(INEXISTENT_TYPE, PERSON_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
-        }
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(INEXISTENT_TYPE, PERSON_ID));
+        Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
     }
 
 }

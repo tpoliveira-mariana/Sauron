@@ -168,58 +168,34 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackMatchNOK_invalidCarId() {
-        try {
-            List<String> result = frontend.trackMatch(CAR_TYPE, INVALID_CAR_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
-        }
+    public void trackMatchNOKInvalidCarId() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(CAR_TYPE, INVALID_CAR_ID));
+        Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOK_invalidPersonId() {
-        try {
-            List<String> result = frontend.trackMatch(PERSON_TYPE, INVALID_PERSON_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
-        }
+    public void trackMatchNOKInvalidPersonId() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(PERSON_TYPE, INVALID_PERSON_ID));
+        Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOK_PersonId() {
-        try {
-            List<String> result = frontend.trackMatch(PERSON_TYPE, INEXISTENT_PERSON_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
-        }
+    public void trackMatchNOKPersonId() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(PERSON_TYPE, INEXISTENT_PERSON_ID));
+        Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOK_CarId() {
-        try {
-            List<String> result = frontend.trackMatch(CAR_TYPE, INEXISTENT_CAR_ID);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
-        }
+    public void trackMatchNOKCarId() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(CAR_TYPE, INEXISTENT_CAR_ID));
+        Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
+
     }
 
     @Test
-    public void trackMatchNOK_Type() {
-        try {
-            List<String> result = frontend.trackMatch(INEXISTENT_TYPE, PERSON_ID_1);
-            Assertions.assertTrue(result.isEmpty());
-        }
-        catch (SauronException e) {
-            Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
-        }
+    public void trackMatchNOKType() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(INEXISTENT_TYPE, PERSON_ID_1));
+        Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
     }
 
     private void checkResults(List<String> output, List<String> cams, List<String> lats, List<String> longs, String type, List<String> ids) throws SauronException {
