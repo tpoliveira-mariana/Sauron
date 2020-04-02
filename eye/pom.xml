@@ -18,7 +18,7 @@
 	<properties>
 		<!-- see parent POM for more properties -->
 
-		<mainclass>pt.tecnico.sauron.A20.eye.EyeApp</mainclass>
+		<mainclass>pt.tecnico.sauron.eye.EyeApp</mainclass>
 	</properties>
 
 	<dependencies>

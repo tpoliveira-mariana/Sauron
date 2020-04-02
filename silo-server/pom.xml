@@ -17,7 +17,7 @@
 	<properties>
 		<!-- see parent POM for more properties -->
 
-		<mainclass>pt.tecnico.sauron.A20.silo.SiloServerApp</mainclass>
+		<mainclass>pt.tecnico.sauron.silo.SiloServerApp</mainclass>
 		<server.port>8080</server.port>
 	</properties>
 

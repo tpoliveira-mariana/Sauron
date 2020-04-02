@@ -15,7 +15,7 @@
     <name>${project.artifactId}</name>
 
     <properties>
-        <mainclass>pt.tecnico.sauron.A20.exceptions.SauronException</mainclass>
+        <mainclass>pt.tecnico.sauron.exceptions.SauronException</mainclass>
     </properties>
 
     <build>
