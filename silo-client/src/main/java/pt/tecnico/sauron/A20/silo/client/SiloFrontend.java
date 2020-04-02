@@ -5,6 +5,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import pt.tecnico.sauron.A20.exceptions.ErrorMessage;
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 import pt.tecnico.sauron.A20.silo.grpc.*;
 import pt.tecnico.sauron.A20.silo.grpc.Object;
@@ -27,8 +28,7 @@ public class SiloFrontend {
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
-        if (name == null)
-            throw new SauronException(INVALID_CAM_NAME);
+        checkCamera(name, lat, lon);
 
         try {
             Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
@@ -42,8 +42,7 @@ public class SiloFrontend {
     }
 
     public double[] camInfo(String name) throws SauronException {
-        if (name == null)
-            throw new SauronException(INVALID_CAM_NAME);
+        checkCameraName(name);
 
         try {
             CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
@@ -58,10 +57,12 @@ public class SiloFrontend {
     }
 
     public void report(String name, List<List<String>> observations) throws SauronException{
+        checkCameraName(name);
         try {
             ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
 
             for (List<String> observation : observations) {
+                checkObjectArguments(observation.get(0), observation.get(1), false);
                 ObjectType type = stringToType(observation.get(0));
                 Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
                 builder.addObject(builderObj);
@@ -77,6 +78,7 @@ public class SiloFrontend {
 
     public String track(String type, String id) throws SauronException {
         try {
+            checkObjectArguments(type, id, false);
             TrackRequest request = TrackRequest.newBuilder()
                     .setType(stringToType(type))
                     .setId(id)
@@ -93,6 +95,7 @@ public class SiloFrontend {
 
     public List<String> trackMatch(String type, String id) throws SauronException {
         try {
+            checkObjectArguments(type, id, true);
             TrackMatchRequest request = TrackMatchRequest.newBuilder()
                     .setType(stringToType(type))
                     .setId(id)
@@ -112,6 +115,7 @@ public class SiloFrontend {
 
     public List<String> trace(String type, String id) throws SauronException {
         try {
+            checkObjectArguments(type, id, false);
             TraceRequest request = TraceRequest.newBuilder()
                     .setType(stringToType(type))
                     .setId(id)
@@ -219,6 +223,72 @@ public class SiloFrontend {
             return new SauronException(REFUSED);
         }
         return reactToStatus(e.getStatus().getDescription());
+    }
+
+
+    private void checkCamera(String name, double lat, double lon) throws SauronException{
+        checkCameraName(name);
+        checkCameraCoordinates(lat,lon);
+    }
+
+    private void checkCameraName(String name) throws SauronException{
+        if (name == null || !name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15) {
+            throw new SauronException(INVALID_CAM_NAME);
+        }
+    }
+
+    private void checkCameraCoordinates(double lat, double lon) throws SauronException{
+		if (lat > 90 || lat < -90 || lon > 180 || lon < -180) {
+            throw new SauronException(INVALID_COORDINATES);
+        }
+    }
+
+
+    private void checkObjectArguments(String type, String id, boolean partial) throws SauronException {
+        switch (type) {
+            case "car":
+                checkCarId(id, partial);
+                break;
+            case "person":
+                checkPersonId(id, partial);
+                break;
+            default:
+                throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
+        }
+    }
+
+    private void checkCarId(String id, boolean partial) throws SauronException {
+        if (!partial || !id.contains("*")) {
+            int numFields = 0;
+            if (id.length() != 6)
+                throw new SauronException(INVALID_CAR_ID);
+            for (int i = 0; i <3; i++) {
+                char firstChar = id.charAt(2 * i);
+                char secChar = id.charAt(2 * i + 1);
+                if (Character.isDigit(firstChar) && Character.isDigit(secChar))
+                    numFields++;
+                else if (!(Character.isUpperCase(firstChar) && Character.isUpperCase(secChar)))
+                    throw new SauronException(INVALID_CAR_ID);
+            }
+            if (numFields == 3 || numFields == 0) {
+                throw new SauronException(INVALID_CAR_ID);
+            }
+        } else if (id.length() > 6 || id.matches(".*[*][*].*|.*[^A-Z0-9*].*")) {
+            throw new SauronException(ErrorMessage.INVALID_CAR_ID);
+        }
+    }
+
+    private void checkPersonId(String id, boolean partial) throws SauronException {
+        if (!partial || !id.contains("*")) {
+            try {
+                if (Long.parseLong(id) <= 0 || (id.length()>0 && id.charAt(0)=='0'))
+                    throw new SauronException(INVALID_PERSON_ID);
+            } catch(NumberFormatException e) {
+                throw new SauronException(INVALID_PERSON_ID);
+            }
+        } else if (id.matches("0+.*[*].*|.*[*][*].*|.*[^0-9*].*")) {
+            throw new SauronException(ErrorMessage.INVALID_PERSON_ID);
+        }
     }
 
     private SauronException reactToStatus(String msg) {

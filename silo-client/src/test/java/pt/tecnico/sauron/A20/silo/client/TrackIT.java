@@ -72,7 +72,7 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void trackLastObservationOK() throws SauronException, InterruptedException{
+    public void trackOK_trackLastObservation() throws SauronException, InterruptedException{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         String result = frontend.track(PERSON_TYPE, PERSON_ID);
@@ -104,31 +104,31 @@ public class TrackIT extends BaseIT{
     }
 
     @Test
-    public void trackNOKInvalidCarId() {
+    public void trackNOK_invalidCarId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(CAR_TYPE, INVALID_CAR_ID));
         Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackNOKInvalidPersonId() {
+    public void trackNOK_invalidPersonId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(PERSON_TYPE, INVALID_PERSON_ID));
         Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackNOKPersonId() {
+    public void trackNOK_personId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(PERSON_TYPE, INEXISTENT_PERSON_ID));
         Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
-    public void trackNOKCarId() {
+    public void trackNOK_carId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(CAR_TYPE, INEXISTENT_CAR_ID));
         Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
-    public void trackNOKType() {
+    public void trackNOK_type() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.track(INEXISTENT_TYPE, PERSON_ID));
         Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
     }

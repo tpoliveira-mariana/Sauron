@@ -160,6 +160,16 @@ After launching the spotter app the following commands are available to you:
     Note: This command needs the exact ID, therefore the ID cannot contain the `*` character. 
     
     
+- #####Help Command
+    
+    To see all of the supported commands, their description and usage, type:
+    
+    ```
+    help
+    ```
+
+
+    
 ##### **Creating your own server init file:**
 
 To create your own init file:

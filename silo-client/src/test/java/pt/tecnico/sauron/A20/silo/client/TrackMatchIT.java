@@ -64,7 +64,7 @@ public class TrackMatchIT extends BaseIT{
     // tests
 
     @Test
-    public void trackOKCarRegexBegin() throws SauronException{
+    public void trackOK_carRegexBegin() throws SauronException{
         List<String> cams = setVals(CAM_TAGUS, CAM_ALAMEDA, CAM_FCT);
         List<String> lats = setVals("12.0", "13.0", "26.0");
         List<String> longs = setVals("-36.0", "-36.5", "-39.567");
@@ -76,7 +76,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackOKCarRegexMiddle() throws SauronException{
+    public void trackMatchOK_carRegexMiddle() throws SauronException{
         List<String> cams = setVals(CAM_TAGUS, CAM_ALAMEDA, "");
         List<String> lats = setVals("12.0", "13.0", "");
         List<String> longs = setVals("-36.0", "-36.5", "");
@@ -88,7 +88,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackOKCarRegexEnd() throws SauronException{
+    public void trackMatchOK_carRegexEnd() throws SauronException{
         List<String> cams = setVals(CAM_FCT, CAM_ALAMEDA, CAM_TAGUS);
         List<String> lats = setVals("26.0", "13.0", "12.0");
         List<String> longs = setVals("-39.567", "-36.5", "-36.0" );
@@ -100,7 +100,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackOKPersonRegexBegin() throws SauronException{
+    public void trackMatchOK_personRegexBegin() throws SauronException{
         List<String> cams = setVals(CAM_ALAMEDA, CAM_TAGUS, CAM_FCT);
         List<String> lats = setVals("13.0", "12.0", "26.0");
         List<String> longs = setVals("-36.5", "-36.0", "-39.567");
@@ -112,7 +112,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackOKPersonRegexMiddle() throws SauronException{
+    public void trackMatchOK_personRegexMiddle() throws SauronException{
         List<String> cams = setVals(CAM_TAGUS, CAM_FCT, "");
         List<String> lats = setVals("12.0", "26.0", "");
         List<String> longs = setVals("-36.0", "-39.567", "");
@@ -124,7 +124,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackOKPersonRegexEnd() throws SauronException{
+    public void trackMatchOK_personRegexEnd() throws SauronException{
         List<String> cams = setVals(CAM_ALAMEDA, CAM_TAGUS, CAM_FCT);
         List<String> lats = setVals("13.0", "12.0", "26.0");
         List<String> longs = setVals("-36.5", "-36.0", "-39.567");
@@ -136,7 +136,7 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackLastObservationOK() throws SauronException, InterruptedException{
+    public void trackMatchOK_trackLastObservation() throws SauronException, InterruptedException{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         List<String> result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
@@ -168,32 +168,32 @@ public class TrackMatchIT extends BaseIT{
     }
 
     @Test
-    public void trackMatchNOKInvalidCarId() {
+    public void trackMatchNOK_invalidCarId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(CAR_TYPE, INVALID_CAR_ID));
         Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOKInvalidPersonId() {
+    public void trackMatchNOK_invalidPersonId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(PERSON_TYPE, INVALID_PERSON_ID));
         Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOKPersonId() {
+    public void trackMatchNOK_personId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(PERSON_TYPE, INEXISTENT_PERSON_ID));
         Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
     }
 
     @Test
-    public void trackMatchNOKCarId() {
+    public void trackMatchNOK_carId() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(CAR_TYPE, INEXISTENT_CAR_ID));
         Assertions.assertEquals(ErrorMessage.OBJECT_NOT_FOUND, e.getErrorMessage());
 
     }
 
     @Test
-    public void trackMatchNOKType() {
+    public void trackMatchNOK_type() {
         SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.trackMatch(INEXISTENT_TYPE, PERSON_ID_1));
         Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
     }

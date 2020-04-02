@@ -68,7 +68,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
         List<Object> objects = request.getObjectList();
         if (cam == null) {
             responseObserver.onError(NOT_FOUND
-                    .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
+                    .withDescription("CAMERA_NOT_FOUND").asRuntimeException());
         }
         else {
             boolean error = false;
@@ -270,7 +270,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     private static void checkCarId(String id, boolean partial) throws SauronException {
         if (!partial || !id.contains("*")) {
             SauronCar.checkId(id);
-        } else if (id.length() > 6 || id.matches(".*[*][*].*")) {
+        } else if (id.length() > 6 || id.matches(".*[*][*].*|.*[^A-Z0-9*].*")) {
             throw new SauronException(ErrorMessage.INVALID_CAR_ID);
         }
     }
@@ -278,7 +278,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     private static void checkPersonId(String id, boolean partial) throws SauronException {
         if (!partial || !id.contains("*")) {
             SauronPerson.checkId(id);
-        } else if (id.matches("0+[*].*|.*[*][*].*|.*[^0-9*].*")) {
+        } else if (id.matches("0+.*[*].*|.*[*][*].*|.*[^0-9*].*")) {
             throw new SauronException(ErrorMessage.INVALID_PERSON_ID);
         }
     }
