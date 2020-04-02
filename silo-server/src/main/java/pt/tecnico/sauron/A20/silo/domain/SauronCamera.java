@@ -2,6 +2,8 @@ package pt.tecnico.sauron.A20.silo.domain;
 
 import pt.tecnico.sauron.A20.exceptions.SauronException;
 
+import java.util.regex.Pattern;
+
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.INVALID_CAM_NAME;
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.INVALID_COORDINATES;
 
@@ -11,6 +13,8 @@ public class SauronCamera {
     private double _lat;
     private double _lon;
 
+    // fully detect valid cam name
+    private static final Pattern NAME_PATT = Pattern.compile("[A-Za-z0-9]{3,15}+");
 
     public SauronCamera(String name, double lat, double lon) throws SauronException {
         checkAttributes(name, lat, lon);
@@ -24,7 +28,7 @@ public class SauronCamera {
         if (lat > 90 || lat < -90 || lon > 180 || lon < -180)
             throw new SauronException(INVALID_COORDINATES);
 
-        else if (!name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15)
+        if (!NAME_PATT.matcher(name).matches())
             throw new SauronException(INVALID_CAM_NAME);
     }
 

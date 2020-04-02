@@ -15,6 +15,7 @@ import pt.tecnico.sauron.A20.silo.grpc.Object;
 import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.grpc.Status.*;
@@ -23,6 +24,12 @@ import static io.grpc.Status.*;
 public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     /** Sauron implementation. */
     private Silo silo = new Silo();
+
+    // partially detect invalid person partial id
+    private static final Pattern INVAL_PERSON_PATT = Pattern.compile("0+.*[*].*|.*[*][*].*|.*[^0-9*].*");
+
+    // partially detect invalid car partial id
+    private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
@@ -270,7 +277,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     private static void checkCarId(String id, boolean partial) throws SauronException {
         if (!partial || !id.contains("*")) {
             SauronCar.checkId(id);
-        } else if (id.length() > 6 || id.matches(".*[*][*].*|.*[^A-Z0-9*].*")) {
+        } else if (id.length() > 6 || INVAL_CAR_PATT.matcher(id).matches()) {
             throw new SauronException(ErrorMessage.INVALID_CAR_ID);
         }
     }
@@ -278,7 +285,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     private static void checkPersonId(String id, boolean partial) throws SauronException {
         if (!partial || !id.contains("*")) {
             SauronPerson.checkId(id);
-        } else if (id.matches("0+.*[*].*|.*[*][*].*|.*[^0-9*].*")) {
+        } else if (INVAL_PERSON_PATT.matcher(id).matches()) {
             throw new SauronException(ErrorMessage.INVALID_PERSON_ID);
         }
     }

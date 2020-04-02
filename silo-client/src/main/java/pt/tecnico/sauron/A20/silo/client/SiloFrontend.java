@@ -13,6 +13,7 @@ import pt.tecnico.sauron.A20.silo.grpc.Object;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
@@ -20,6 +21,15 @@ import static pt.tecnico.sauron.A20.exceptions.ErrorMessage.*;
 public class SiloFrontend {
 
     private SauronGrpc.SauronBlockingStub _stub;
+
+    // fully detect valid cam name
+    private static final Pattern CAM_PATT = Pattern.compile("[A-Za-z0-9]{3,15}+");
+
+    // partially detect invalid person partial id
+    private static final Pattern INVAL_PERSON_PATT = Pattern.compile("0+.*[*].*|.*[*][*].*|.*[^0-9*].*");
+
+    // partially detect invalid car partial id
+    private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
     public SiloFrontend(String host, String port) {
         String target = host + ":" + Integer.parseInt(port);
@@ -232,7 +242,7 @@ public class SiloFrontend {
     }
 
     private void checkCameraName(String name) throws SauronException{
-        if (name == null || !name.matches("[A-Za-z0-9]+") || name.length() < 3 || name.length() > 15) {
+        if (name == null || !CAM_PATT.matcher(name).matches()) {
             throw new SauronException(INVALID_CAM_NAME);
         }
     }
@@ -273,7 +283,7 @@ public class SiloFrontend {
             if (numFields == 3 || numFields == 0) {
                 throw new SauronException(INVALID_CAR_ID);
             }
-        } else if (id.length() > 6 || id.matches(".*[*][*].*|.*[^A-Z0-9*].*")) {
+        } else if (id.length() > 6 || INVAL_CAR_PATT.matcher(id).matches()) {
             throw new SauronException(ErrorMessage.INVALID_CAR_ID);
         }
     }
@@ -286,7 +296,7 @@ public class SiloFrontend {
             } catch(NumberFormatException e) {
                 throw new SauronException(INVALID_PERSON_ID);
             }
-        } else if (id.matches("0+.*[*].*|.*[*][*].*|.*[^0-9*].*")) {
+        } else if (INVAL_PERSON_PATT.matcher(id).matches()) {
             throw new SauronException(ErrorMessage.INVALID_PERSON_ID);
         }
     }
