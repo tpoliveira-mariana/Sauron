@@ -63,7 +63,7 @@ public class ReportIT extends BaseIT {
         List<List<String>> obs = new ArrayList<>();
         addObservation("person", PERSON_ID_1, obs);
         Assertions.assertEquals(
-                ErrorMessage.OBJECT_NOT_FOUND,
+                ErrorMessage.CAMERA_NOT_FOUND,
                 Assertions.assertThrows(
                         SauronException.class,
                         () -> frontend.report(INEXISTENT_CAM_NAME, obs)

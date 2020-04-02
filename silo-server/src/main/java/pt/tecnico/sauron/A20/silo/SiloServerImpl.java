@@ -156,7 +156,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase{
     }
 
     @Override
-    public synchronized void ctrlPing(PingRequest request, StreamObserver<PingResponse> responseObserver) {
+    public void ctrlPing(PingRequest request, StreamObserver<PingResponse> responseObserver) {
         PingResponse.Builder builder = PingResponse.newBuilder();
         String input = request.getInput();
         if (input == null || input.isBlank()) {
