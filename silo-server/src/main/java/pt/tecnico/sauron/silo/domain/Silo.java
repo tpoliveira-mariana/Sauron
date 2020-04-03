@@ -2,6 +2,7 @@ package pt.tecnico.sauron.silo.domain;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import pt.tecnico.sauron.exceptions.ErrorMessage;
@@ -45,18 +46,18 @@ public class Silo {
     }
 
     public void addObject(SauronObject obj) {
-        _objs.put(obj.getType()+obj.getId(), obj);
+        _objs.put(obj.getType() + ":" + obj.getId(), obj);
     }
 
     public SauronObject addObject(String type, String id) throws SauronException {
         SauronObject sauObj = createNewObject(type, id);
-        String key = type + id;
+        String key = type + ":" + id;
         _objs.put(key, sauObj);
         return sauObj;
     }
 
     public SauronObject getObject(String type, String id) {
-        String key = type + id;
+        String key = type + ":" + id;
         return _objs.get(key);
     }
 
@@ -91,25 +92,31 @@ public class Silo {
     }
 
     public SauronObservation track(String type, String id) throws SauronException {
-        SauronObject object = createNewObject(type, id);
+        SauronObject object = getObject(type, id);
+        if (object == null)
+            throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
+
         List<SauronObservation> sauObs = _obs.get(object);
-        if (sauObs == null)
+        if (sauObs.isEmpty())
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 
         return sauObs.get(sauObs.size()-1);
     }
 
-    public List<SauronObservation> trackMatch(String type, String parcId) throws SauronException {
-        String regex = buildRegex(parcId);
+    public List<SauronObservation> trackMatch(String type, String partId) throws SauronException {
+        Pattern pattern = buildRegex(partId);
         return _obs.keySet()
                 .stream()
-                .filter(obj -> obj.getId().matches(regex) && obj.getType().equals(type))
+                .filter(obj -> pattern.matcher(obj.getId()).matches() && obj.getType().equals(type))
                 .map(obj -> _obs.get(obj).get(_obs.get(obj).size()-1))
                 .collect(Collectors.toList());
     }
 
     public List<SauronObservation> trace(String type, String id) throws SauronException {
-        SauronObject object = createNewObject(type, id);
+        SauronObject object = getObject(type, id);
+        if (object == null)
+            throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
+
         List<SauronObservation> sauObs = _obs.get(object);
         if (sauObs == null)
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
@@ -119,10 +126,10 @@ public class Silo {
         return sauObs;
     }
 
-    private String buildRegex(String parcId) throws SauronException {
+    private Pattern buildRegex(String partId) throws SauronException {
         StringBuilder builder = new StringBuilder();
-        for (int i=0; i < parcId.length(); i++) {
-            char c = parcId.charAt(i);
+        for (int i=0; i < partId.length(); i++) {
+            char c = partId.charAt(i);
             if (c == '*')
                 builder.append(".*");
             else if (Character.isLetterOrDigit(c))
@@ -131,6 +138,6 @@ public class Silo {
                 throw new SauronException(ErrorMessage.INVALID_ID);
             }
         }
-        return builder.toString();
+        return Pattern.compile(builder.toString());
     }
 }

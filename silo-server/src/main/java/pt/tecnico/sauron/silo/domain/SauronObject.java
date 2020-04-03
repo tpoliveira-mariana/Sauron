@@ -24,15 +24,4 @@ public abstract class SauronObject {
         throw new SauronException(ErrorMessage.INVALID_ID);
     }
 
-    @Override
-    public int hashCode() {
-        return _id.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof SauronObject)
-            return getId() == ((SauronObject)obj).getId();
-        return false;
-    }
 }

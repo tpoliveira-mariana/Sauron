@@ -348,7 +348,7 @@ public class SiloFrontend {
             case CAR:
                 return "car";
             default:
-                return null;
+                return "<UNRECOGNIZED>";
         }
     }
 

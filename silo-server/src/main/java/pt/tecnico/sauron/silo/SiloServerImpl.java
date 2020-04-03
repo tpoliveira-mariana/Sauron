@@ -80,7 +80,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             boolean error = false;
             for(Object obj: objects) {
                 try {
-                    String type = getObjectType(obj.getType());
+                    String type = typeToString(obj.getType());
                     SauronObject sauObj = silo.getObject(type, obj.getId());
                     if (sauObj == null)
                         sauObj = silo.addObject(type, obj.getId());
@@ -105,8 +105,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     public synchronized void track(TrackRequest request, StreamObserver<TrackResponse> responseObserver) {
         TrackResponse.Builder builder = TrackResponse.newBuilder();
         try {
-            checkObjectArguments(getObjectType(request.getType()), request.getId(), false);
-            SauronObservation sauObs = silo.track(getObjectType(request.getType()), request.getId());
+            checkObjectArguments(typeToString(request.getType()), request.getId(), false);
+            SauronObservation sauObs = silo.track(typeToString(request.getType()), request.getId());
 
             builder.setObservation(buildObs(sauObs));
 
@@ -124,8 +124,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         TrackMatchResponse.Builder builder = TrackMatchResponse.newBuilder();
 
         try {
-            checkObjectArguments(getObjectType(request.getType()), request.getId(), true);
-            List<SauronObservation> sauObs = silo.trackMatch(getObjectType(request.getType()), request.getId());
+            checkObjectArguments(typeToString(request.getType()), request.getId(), true);
+            List<SauronObservation> sauObs = silo.trackMatch(typeToString(request.getType()), request.getId());
 
             if (sauObs.isEmpty())
                 responseObserver.onError(NOT_FOUND
@@ -147,8 +147,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         TraceResponse.Builder builder = TraceResponse.newBuilder();
 
         try {
-            checkObjectArguments(getObjectType(request.getType()), request.getId(), false);
-            List<SauronObservation> sauObs = silo.trace(getObjectType(request.getType()), request.getId());
+            checkObjectArguments(typeToString(request.getType()), request.getId(), false);
+            List<SauronObservation> sauObs = silo.trace(typeToString(request.getType()), request.getId());
 
             builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
 
@@ -188,7 +188,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private Observation buildObs(SauronObservation sauObs) {
-        ObjectType type = sauObs.getObjectType().equals("car") ? ObjectType.CAR : ObjectType.PERSON;
+        ObjectType type;
+        try {
+            type = stringToType(sauObs.getObjectType());
+        } catch (SauronException e) {
+            type = ObjectType.UNRECOGNIZED;
+        }
+
         Timestamp ts;
         try {
             ts = Timestamps.parse(sauObs.getTimeStamp());
@@ -205,12 +211,23 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return Observation.newBuilder().setObject(object).setCam(cam).setTimestamp(ts).build();
     }
 
-    private String getObjectType(ObjectType type) throws SauronException{
+    private String typeToString(ObjectType type) throws SauronException{
         switch (type){
             case PERSON:
                 return "person";
             case CAR:
                 return "car";
+            default:
+                throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
+        }
+    }
+
+    private ObjectType stringToType(String type) throws SauronException{
+        switch (type){
+            case "person":
+                return ObjectType.PERSON;
+            case "car":
+                return ObjectType.CAR;
             default:
                 throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
         }
