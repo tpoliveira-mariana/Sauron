@@ -11,9 +11,9 @@ import pt.tecnico.sauron.exceptions.SauronException;
 
 public class Silo {
 
-    private Map<String, SauronCamera> _cams = new ConcurrentHashMap<>();
-    private Map<String, SauronObject> _objs = new ConcurrentHashMap<>();
-    private Map<SauronObject, List<SauronObservation>> _obs = new ConcurrentHashMap<>();
+    private Map<String, SauronCamera> _cams = new HashMap<>();
+    private Map<String, SauronObject> _objs = new HashMap<>();
+    private Map<SauronObject, List<SauronObservation>> _obs = new HashMap<>();
 
 
     public Silo() { }
