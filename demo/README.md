@@ -94,7 +94,7 @@ After launching the spotter app the following commands are available to you:
     For example, to use the file spotterInit.txt write,
     
     ```
-    init spotterInit.txt
+    init ../demo/spotterInit.txt
     ```
   
     Note: To create your own server init file read the sub-section below `Creating your own init file`.
