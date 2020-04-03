@@ -137,7 +137,7 @@ public class EyeApp {
 			observations.clear();
 		}
 		catch (SauronException e) {
-			System.out.println(e.getErrorMessageLabel());
+			System.out.println("Some observations were not submitted - " + e.getErrorMessageLabel());
 			observations.clear();
 		}
 	}

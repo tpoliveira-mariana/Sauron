@@ -20,7 +20,7 @@ car,aa11BB
 dog,AACCBB
 
 # Expected:
-# The type does not exist.
-# Invalid person identifier provided.
-# Invalid car identifier provided.
-# Invalid car identifier provided.
+# Some observations were not submitted - The type does not exist.
+# Some observations were not submitted - Invalid person identifier provided.
+# Some observations were not submitted - Invalid car identifier provided.
+# Some observations were not submitted - Invalid car identifier provided.

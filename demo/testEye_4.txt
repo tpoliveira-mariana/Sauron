@@ -14,4 +14,4 @@ car,22BB33
 car,113A22
 
 # Expected:
-# Invalid person identifier provided.
+# Some observations were not submitted - Invalid person identifier provided.

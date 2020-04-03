@@ -66,14 +66,21 @@ public class SiloFrontend {
 
     public void report(String name, List<List<String>> observations) throws SauronException{
         checkCameraName(name);
+        boolean error = false;
+        ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
         try {
             ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
-
             for (List<String> observation : observations) {
-                checkObjectArguments(observation.get(0), observation.get(1), false);
-                ObjectType type = stringToType(observation.get(0));
-                Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
-                builder.addObject(builderObj);
+                try {
+                    checkObjectArguments(observation.get(0), observation.get(1), false);
+                    ObjectType type = stringToType(observation.get(0));
+                    Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
+                    builder.addObject(builderObj);
+                } catch (SauronException e){
+                    if (!error)
+                        errorMessage = e.getErrorMessage();
+                    error = true;
+                }
             }
 
             ReportRequest request = builder.build();
@@ -82,6 +89,8 @@ public class SiloFrontend {
         catch (StatusRuntimeException e) {
             throw properException(e);
         }
+        if (error)
+            throw new SauronException(errorMessage);
     }
 
     public String track(String type, String id) throws SauronException {
