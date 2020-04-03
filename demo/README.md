@@ -1,5 +1,7 @@
 ### Sauron Usage Guide
 
+Before executing any of the commands bellow you should have already followed the instructions in the README.md of the root directory
+
 #### Launch ServerApp
 ```
 $ cd silo-server
