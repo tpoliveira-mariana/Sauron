@@ -211,5 +211,6 @@ In order for you to run the automatic tests you must:
 1. Launch ServerApp in one terminal
 2. Open a different terminal tab by pressing `ctrl-shift-t`
 3. Go to project's root directory: `$ cd ../`
-4. Install the project without skipping tests: `$ mvn install`
+4. And then run one of the two following commands:
+ `$ mvn install`  `$ mvn verify`
 
