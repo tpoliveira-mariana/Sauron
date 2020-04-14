@@ -50,6 +50,7 @@ public class SiloServerApp {
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
 		} catch (ZKNamingException e) {
+			System.out.println("Can't start server - Zookeeper error.");
 			Thread.currentThread().interrupt();
 		} finally  {
 			if (zkNaming != null) {
