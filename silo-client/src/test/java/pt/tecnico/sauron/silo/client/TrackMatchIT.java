@@ -3,6 +3,7 @@ package pt.tecnico.sauron.silo.client;
 import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -11,7 +12,8 @@ import java.util.List;
 
 public class TrackMatchIT extends BaseIT{
     private static final String HOST = "localhost";
-    private static final String PORT = "8080";
+    private static final String PORT = "8081";
+    private static final String PATH = "/grpc/sauron/silo/1";
     private static final String TEST_DATA_FILE = "./src/test/trackMatchIT_data.txt";
     private static SiloFrontend frontend;
 
@@ -39,8 +41,8 @@ public class TrackMatchIT extends BaseIT{
 
     // one-time initialization and clean-up
     @BeforeAll
-    public static void oneTimeSetUp() {
-        frontend = new SiloFrontend(HOST, PORT);
+    public static void oneTimeSetUp() throws ZKNamingException {
+        frontend = new SiloFrontend(HOST, PORT, PATH);
         try {
             frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);

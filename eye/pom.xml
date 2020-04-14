@@ -18,7 +18,13 @@
 	<properties>
 		<!-- see parent POM for more properties -->
 
+		<!-- instance number -->
+		<instance>1</instance>
+
 		<mainclass>pt.tecnico.sauron.eye.EyeApp</mainclass>
+		<zoo.host>localhost</zoo.host>
+		<zoo.port>2181</zoo.port>
+		<server.path>/grpc/sauron/silo/${instance}</server.path>
 	</properties>
 
 	<dependencies>
@@ -76,6 +82,9 @@
 					<cleanupDaemonThreads>false</cleanupDaemonThreads>
 					<mainClass>${mainclass}</mainClass>
 					<arguments>
+						<argument>${zoo.host}</argument>
+						<argument>${zoo.port}</argument>
+						<argument>${server.path}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

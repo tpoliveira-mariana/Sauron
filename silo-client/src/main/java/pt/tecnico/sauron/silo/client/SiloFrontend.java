@@ -9,6 +9,9 @@ import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
 import pt.tecnico.sauron.silo.grpc.Object;
 import pt.tecnico.sauron.silo.grpc.*;
+import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
+import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,8 +32,11 @@ public class SiloFrontend {
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
-    public SiloFrontend(String host, String port) {
-        String target = host + ":" + Integer.parseInt(port);
+    public SiloFrontend(String zooHost, String zooPort, String path) throws ZKNamingException {
+        ZKNaming zkNaming = new ZKNaming(zooHost,zooPort);
+        // lookup
+        ZKRecord record = zkNaming.lookup(path);
+        String target = record.getURI();
         final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         _stub = SauronGrpc.newBlockingStub(channel);
     }

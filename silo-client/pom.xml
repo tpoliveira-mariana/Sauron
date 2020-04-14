@@ -23,7 +23,12 @@
 	</properties>
 
 	<dependencies>
-
+		<!-- ZK Naming -->
+		<dependency>
+			<groupId>pt.ulisboa.tecnico.sdis</groupId>
+			<artifactId>zk-naming</artifactId>
+			<version>1.0.3</version>
+		</dependency>
 		<!-- contract brings gRPC dependencies with it -->
 		<dependency>
 			<groupId>${project.groupId}</groupId>

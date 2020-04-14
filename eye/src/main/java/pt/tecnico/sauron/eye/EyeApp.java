@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import pt.tecnico.sauron.exceptions.SauronException;
 import pt.tecnico.sauron.silo.client.SiloFrontend;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class EyeApp {
 
@@ -25,14 +26,14 @@ public class EyeApp {
 		}
 
 		// check arguments
-		if (args.length < 5) {
+		if (args.length < 6) {
 			System.out.println("Argument(s) missing!");
 			System.out.printf("Usage: java eye host port cameraName latitude longitude%n");
 			return ;
 		}
 
 		try {
-			_frontend = new SiloFrontend(args[0], args[1]);
+			_frontend = new SiloFrontend(args[0], args[1], args[2]);
 
 			String cameraName = args[2];
 			double lat = Double.parseDouble(args[3]);
@@ -42,6 +43,9 @@ public class EyeApp {
 		}
 		catch (NumberFormatException e) {
 			shutDownMessage("Invalid number provided.");
+		}
+		catch (ZKNamingException e) {
+			shutDownMessage("Zookeeper error.");
 		}
 	}
 

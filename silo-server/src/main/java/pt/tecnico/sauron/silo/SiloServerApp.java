@@ -4,6 +4,8 @@ package pt.tecnico.sauron.silo;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.io.IOException;
 
@@ -18,33 +20,46 @@ public class SiloServerApp {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		if (args.length < 1) {
+		if (args.length < 5) {
 			System.out.println("Argument missing!");
 			return;
 		}
-
-		final int port = Integer.parseInt(args[0]);
+		final String zooHost = args[0];
+		final String zooPort = args[1];
+		final String path = args[2];
+		final String host = args[3];
+		final String port = args[4];
 		final BindableService impl = new SiloServerImpl();
 
-		// Create a new server to listen on port
-		Server server = ServerBuilder.forPort(port).addService(impl).build();
-
+		ZKNaming zkNaming = null;
 		try {
+			zkNaming = new ZKNaming(zooHost, zooPort);
+			// publish
+			zkNaming.rebind(path, host, port);
+			// Create a new server to listen on port
+			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
 			// Start the server
 			server.start();
-
 			// Server threads are running in the background.
 			System.out.println("Server started");
-
 			// Do not exit the main thread. Wait until server is terminated.
 			server.awaitTermination();
-		}
-		catch (IOException ioe) {
+		} catch (IOException ioe) {
 			System.out.println("Can't start server.");
 			return;
-		}
-		catch (InterruptedException ie) {
+		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
+		} catch (ZKNamingException e) {
+			Thread.currentThread().interrupt();
+		} finally  {
+			if (zkNaming != null) {
+				// remove
+				try {
+					zkNaming.unbind(path, host, String.valueOf(port));
+				} catch (ZKNamingException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
 		}
 	}
 	

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,8 +28,8 @@ public class TraceIT extends BaseIT {
 
     // one-time initialization and clean-up
     @BeforeAll
-    public static void oneTimeSetUp() {
-        frontend = new SiloFrontend("localhost", "8080");
+    public static void oneTimeSetUp() throws ZKNamingException {
+        frontend = new SiloFrontend("localhost", "8081", "/grpc/sauron/silo/1");
         try {
             frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);

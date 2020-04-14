@@ -3,10 +3,12 @@ package pt.tecnico.sauron.silo.client;
 import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class CamJoinIT extends BaseIT{
     private static final String HOST = "localhost";
-    private static final String PORT = "8080";
+    private static final String PORT = "8081";
+    private static final String PATH = "/grpc/sauron/silo/1";
     private static SiloFrontend frontend;
 
     private static final String NAME_TAGUS = "Tagus";
@@ -25,8 +27,8 @@ public class CamJoinIT extends BaseIT{
 
 
     @BeforeAll
-    public static void oneTimeSetUp() {
-        frontend = new SiloFrontend(HOST, PORT);
+    public static void oneTimeSetUp() throws ZKNamingException {
+        frontend = new SiloFrontend(HOST, PORT, PATH);
     }
 
     @BeforeEach
