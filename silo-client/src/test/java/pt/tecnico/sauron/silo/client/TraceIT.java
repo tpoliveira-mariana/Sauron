@@ -1,16 +1,21 @@
 package pt.tecnico.sauron.silo.client;
 
+import com.google.protobuf.util.Timestamps;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.tecnico.sauron.silo.grpc.ObjectType;
+import pt.tecnico.sauron.silo.grpc.Observation;
+import pt.tecnico.sauron.silo.grpc.TraceResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.stream.Collectors;
 
 public class TraceIT extends BaseIT {
     private static SiloFrontend frontend;
@@ -58,7 +63,10 @@ public class TraceIT extends BaseIT {
             List<String> cams = setVals(CAM_FCT, CAM_ALAMEDA, CAM_TAGUS);
             List<String> lats = setVals("26.0", "13.0", "12.0");
             List<String> longs = setVals("-39.567", "-36.5", "-36.0" );
-            List<String> result = frontend.trace(PERSON_TYPE, PERSON_ID_1);
+            TraceResponse response = frontend.trace(PERSON_TYPE, PERSON_ID_1);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.size() == 3);
             int i = 0;
             for (String r : result) {
@@ -81,7 +89,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_empty() {
         try {
-            List<String> result = frontend.trace(CAR_TYPE, CAR_ID);
+            TraceResponse response = frontend.trace(CAR_TYPE, CAR_ID);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
@@ -92,7 +103,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_Id() {
         try {
-            List<String> result = frontend.trace(PERSON_TYPE, INEXISTENT_PERSON_ID);
+            TraceResponse response = frontend.trace(PERSON_TYPE, INEXISTENT_PERSON_ID);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
@@ -103,7 +117,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_Type() {
         try {
-            List<String> result = frontend.trace(INEXISTENT_TYPE, PERSON_ID_1);
+            TraceResponse response = frontend.trace(INEXISTENT_TYPE, PERSON_ID_1);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
@@ -118,6 +135,27 @@ public class TraceIT extends BaseIT {
         c.add(v3);
 
         return c;
+    }
+
+    private static String printObservation(Observation obs) {
+        String ts = Timestamps.toString(obs.getTimestamp());
+        return typeToString(obs.getObject().getType()) + ","
+                + obs.getObject().getId() + ","
+                + ts.substring(0, ts.lastIndexOf('.')) + ","
+                + obs.getCam().getName() + ","
+                + obs.getCam().getCoordinates().getLatitude() + ","
+                + obs.getCam().getCoordinates().getLongitude();
+    }
+
+    private static String typeToString(ObjectType type) {
+        switch (type){
+            case PERSON:
+                return "person";
+            case CAR:
+                return "car";
+            default:
+                return "<UNRECOGNIZED>";
+        }
     }
 
 }

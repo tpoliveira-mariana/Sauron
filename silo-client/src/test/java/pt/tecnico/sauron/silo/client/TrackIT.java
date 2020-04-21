@@ -1,11 +1,16 @@
 package pt.tecnico.sauron.silo.client;
 
+import com.google.protobuf.util.Timestamps;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.tecnico.sauron.silo.grpc.ObjectType;
+import pt.tecnico.sauron.silo.grpc.Observation;
+import pt.tecnico.sauron.silo.grpc.TraceResponse;
+import pt.tecnico.sauron.silo.grpc.TrackResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.time.LocalDateTime;
@@ -62,7 +67,8 @@ public class TrackIT extends BaseIT{
 
     @Test
     public void trackOK() throws SauronException{
-        String result = frontend.track(CAR_TYPE, CAR_ID);
+        TrackResponse  response = frontend.track(CAR_TYPE, CAR_ID);
+        String result = printObservation(response.getObservation());
         String[] results = result.split(",");
 
         Assertions.assertEquals(6, results.length);
@@ -77,7 +83,8 @@ public class TrackIT extends BaseIT{
     public void trackOK_trackLastObservation() throws SauronException, InterruptedException{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-        String result = frontend.track(PERSON_TYPE, PERSON_ID);
+        TrackResponse  response = frontend.track(PERSON_TYPE, PERSON_ID);
+        String result = printObservation(response.getObservation());
         String[] results = result.split(",");
         LocalDateTime timeBefore = LocalDateTime.parse(results[2], formatter);
 
@@ -90,7 +97,8 @@ public class TrackIT extends BaseIT{
         Thread.sleep(1000); // test needs to sleep in order to compare the times
         frontend.report(CAM_ALAMEDA, observations);
 
-        result = frontend.track(PERSON_TYPE, PERSON_ID);
+        response = frontend.track(PERSON_TYPE, PERSON_ID);
+        result = printObservation(response.getObservation());
         String[] resultsAfter = result.split(",");
 
         LocalDateTime timeAfter = LocalDateTime.parse(resultsAfter[2], formatter);
@@ -135,4 +143,25 @@ public class TrackIT extends BaseIT{
         Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
     }
 
+
+    private static String printObservation(Observation obs) {
+        String ts = Timestamps.toString(obs.getTimestamp());
+        return typeToString(obs.getObject().getType()) + ","
+                + obs.getObject().getId() + ","
+                + ts.substring(0, ts.lastIndexOf('.')) + ","
+                + obs.getCam().getName() + ","
+                + obs.getCam().getCoordinates().getLatitude() + ","
+                + obs.getCam().getCoordinates().getLongitude();
+    }
+
+    private static String typeToString(ObjectType type) {
+        switch (type){
+            case PERSON:
+                return "person";
+            case CAR:
+                return "car";
+            default:
+                return "<UNRECOGNIZED>";
+        }
+    }
 }

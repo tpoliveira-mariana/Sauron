@@ -35,7 +35,7 @@ public class SiloServerApp {
 		try {
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			// publish
-			zkNaming.rebind(path, host, port);
+			zkNaming.bind(path, host, port);
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
 			// Start the server
@@ -46,7 +46,6 @@ public class SiloServerApp {
 			server.awaitTermination();
 		} catch (IOException ioe) {
 			System.out.println("Can't start server.");
-			return;
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
 		} catch (ZKNamingException e) {

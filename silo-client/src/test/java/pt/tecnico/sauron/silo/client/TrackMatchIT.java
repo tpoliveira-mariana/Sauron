@@ -1,14 +1,21 @@
 package pt.tecnico.sauron.silo.client;
 
+import com.google.protobuf.util.Timestamps;
 import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.tecnico.sauron.silo.grpc.ObjectType;
+import pt.tecnico.sauron.silo.grpc.Observation;
+import pt.tecnico.sauron.silo.grpc.TrackMatchResponse;
+import pt.tecnico.sauron.silo.grpc.TrackResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TrackMatchIT extends BaseIT{
     private static final String HOST = "localhost";
@@ -72,7 +79,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-36.0", "-36.5", "-39.567");
         List<String> ids = setVals(CAR_ID_1, CAR_ID_3, CAR_ID_5);
 
-        List<String> result = frontend.trackMatch(CAR_TYPE, "A*");
+        TrackMatchResponse response = frontend.trackMatch(CAR_TYPE, "A*");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "car", ids);
     }
@@ -84,7 +96,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-36.0", "-36.5", "");
         List<String> ids = setVals(CAR_ID_1, CAR_ID_3, "");
 
-        List<String> result = frontend.trackMatch(CAR_TYPE, "AB*99");
+        TrackMatchResponse response = frontend.trackMatch(CAR_TYPE, "AB*99");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "car", ids);
     }
@@ -96,7 +113,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-39.567", "-36.5", "-36.0" );
         List<String> ids = setVals(CAR_ID_5, CAR_ID_4, CAR_ID_2);
 
-        List<String> result = frontend.trackMatch(CAR_TYPE, "*B");
+        TrackMatchResponse response = frontend.trackMatch(CAR_TYPE, "*B");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "car", ids);
     }
@@ -108,7 +130,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-36.5", "-36.0", "-39.567");
         List<String> ids = setVals(PERSON_ID_3, PERSON_ID_1, PERSON_ID_4);
 
-        List<String> result = frontend.trackMatch(PERSON_TYPE, "1*");
+        TrackMatchResponse response = frontend.trackMatch(PERSON_TYPE, "1*");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "person", ids);
     }
@@ -120,7 +147,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-36.0", "-39.567", "");
         List<String> ids = setVals(PERSON_ID_1, PERSON_ID_4, "");
 
-        List<String> result = frontend.trackMatch(PERSON_TYPE, "1*1");
+        TrackMatchResponse response = frontend.trackMatch(PERSON_TYPE, "1*1");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "person", ids);
     }
@@ -132,7 +164,12 @@ public class TrackMatchIT extends BaseIT{
         List<String> longs = setVals("-36.5", "-36.0", "-39.567");
         List<String> ids = setVals(PERSON_ID_2, PERSON_ID_1, PERSON_ID_4);
 
-        List<String> result = frontend.trackMatch(PERSON_TYPE, "*1");
+        TrackMatchResponse response = frontend.trackMatch(PERSON_TYPE, "*1");
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
 
         checkResults(result, cams, lats, longs, "person", ids);
     }
@@ -141,7 +178,12 @@ public class TrackMatchIT extends BaseIT{
     public void trackMatchOK_trackLastObservation() throws SauronException, InterruptedException{
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
-        List<String> result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
+        TrackMatchResponse response = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
+        List<String> result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
         String[] results = result.get(0).split(",");
         LocalDateTime timeBefore = LocalDateTime.parse(results[2], formatter);
 
@@ -154,7 +196,12 @@ public class TrackMatchIT extends BaseIT{
         Thread.sleep(1000); // test needs to sleep in order to compare the times
         frontend.report(CAM_ALAMEDA, observations);
 
-        result = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
+        response = frontend.trackMatch(PERSON_TYPE, PERSON_ID_5);
+        result = response.getObservationsList()
+                .stream()
+                .sorted(getComparator(response))
+                .map(TrackMatchIT::printObservation)
+                .collect(Collectors.toList());
         String[] resultsAfter = result.get(0).split(",");
 
         LocalDateTime timeAfter = LocalDateTime.parse(resultsAfter[2], formatter);
@@ -221,5 +268,39 @@ public class TrackMatchIT extends BaseIT{
         c.add(v3);
 
         return c;
+    }
+
+    private static Comparator<Observation> getComparator(TrackMatchResponse response) {
+        ObjectType type = response.getObservationsCount() == 0 ?
+                ObjectType.CAR : response.getObservations(0).getObject().getType();
+        switch (type) {
+            case PERSON:
+                return Comparator.comparingLong(obs -> Long.parseLong(obs.getObject().getId()));
+            case CAR:
+                return Comparator.comparing(obs -> obs.getObject().getId());
+            default:
+                return Comparator.comparing(Observation::toString);
+        }
+    }
+
+    private static String printObservation(Observation obs) {
+        String ts = Timestamps.toString(obs.getTimestamp());
+        return typeToString(obs.getObject().getType()) + ","
+                + obs.getObject().getId() + ","
+                + ts.substring(0, ts.lastIndexOf('.')) + ","
+                + obs.getCam().getName() + ","
+                + obs.getCam().getCoordinates().getLatitude() + ","
+                + obs.getCam().getCoordinates().getLongitude();
+    }
+
+    private static String typeToString(ObjectType type) {
+        switch (type){
+            case PERSON:
+                return "person";
+            case CAR:
+                return "car";
+            default:
+                return "<UNRECOGNIZED>";
+        }
     }
 }

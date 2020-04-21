@@ -99,7 +99,7 @@ public class SiloFrontend {
             throw new SauronException(errorMessage);
     }
 
-    public String track(String type, String id) throws SauronException {
+    public TrackResponse track(String type, String id) throws SauronException {
         try {
             checkObjectArguments(type, id, false);
             TrackRequest request = TrackRequest.newBuilder()
@@ -107,8 +107,7 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            TrackResponse response = _stub.track(request);
-            return printObservation(response.getObservation());
+            return _stub.track(request);
         }
         catch (StatusRuntimeException e) {
             throw properException(e);
@@ -116,7 +115,7 @@ public class SiloFrontend {
 
     }
 
-    public List<String> trackMatch(String type, String id) throws SauronException {
+    public TrackMatchResponse trackMatch(String type, String id) throws SauronException {
         try {
             checkObjectArguments(type, id, true);
             TrackMatchRequest request = TrackMatchRequest.newBuilder()
@@ -124,19 +123,14 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            TrackMatchResponse response = _stub.trackMatch(request);
-            return response.getObservationsList()
-                    .stream()
-                    .sorted(getComparator(response))
-                    .map(this::printObservation)
-                    .collect(Collectors.toList());
+            return _stub.trackMatch(request);
         }
         catch (StatusRuntimeException e) {
             throw properException(e);
         }
     }
 
-    public List<String> trace(String type, String id) throws SauronException {
+    public TraceResponse trace(String type, String id) throws SauronException {
         try {
             checkObjectArguments(type, id, false);
             TraceRequest request = TraceRequest.newBuilder()
@@ -144,10 +138,7 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            TraceResponse response = _stub.trace(request);
-            return response.getObservationsList().stream()
-                    .map(this::printObservation)
-                    .collect(Collectors.toList());
+            return  _stub.trace(request);
         }
         catch (StatusRuntimeException e) {
             throw properException(e);
@@ -215,29 +206,6 @@ public class SiloFrontend {
             throw e;
         } catch (FileNotFoundException e) {
             throw new SauronException(ErrorMessage.ERROR_PROCESSING_FILE);
-        }
-    }
-
-    private String printObservation(Observation obs) {
-        String ts = Timestamps.toString(obs.getTimestamp());
-        return typeToString(obs.getObject().getType()) + ","
-                + obs.getObject().getId() + ","
-                + ts.substring(0, ts.lastIndexOf('.')) + ","
-                + obs.getCam().getName() + ","
-                + obs.getCam().getCoordinates().getLatitude() + ","
-                + obs.getCam().getCoordinates().getLongitude();
-    }
-
-    private Comparator<Observation> getComparator(TrackMatchResponse response) {
-        ObjectType type = response.getObservationsCount() == 0 ?
-                ObjectType.CAR : response.getObservations(0).getObject().getType();
-        switch (type) {
-            case PERSON:
-                return Comparator.comparingLong(obs -> Long.parseLong(obs.getObject().getId()));
-            case CAR:
-                return Comparator.comparing(obs -> obs.getObject().getId());
-            default:
-                return Comparator.comparing(Observation::toString);
         }
     }
 
@@ -355,17 +323,5 @@ public class SiloFrontend {
                 throw new SauronException(ErrorMessage.TYPE_DOES_NOT_EXIST);
         }
     }
-
-    private String typeToString(ObjectType type) {
-        switch (type){
-            case PERSON:
-                return "person";
-            case CAR:
-                return "car";
-            default:
-                return "<UNRECOGNIZED>";
-        }
-    }
-
 
 }

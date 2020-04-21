@@ -1,13 +1,17 @@
 package pt.tecnico.sauron.spotter;
 
 
+import com.google.protobuf.util.Timestamps;
 import pt.tecnico.sauron.exceptions.SauronException;
 import pt.tecnico.sauron.silo.client.SiloFrontend;
+import pt.tecnico.sauron.silo.grpc.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 public class SpotterApp {
 
@@ -91,10 +95,17 @@ public class SpotterApp {
 		}
 		try {
 			List<String> output = new ArrayList<>();
-			if (!arguments[2].contains("*"))
-				output.add(_frontend.track(arguments[1], arguments[2]));
-			else
-				output  = _frontend.trackMatch(arguments[1], arguments[2]);
+			if (!arguments[2].contains("*")) {
+				TrackResponse response = _frontend.track(arguments[1], arguments[2]);
+				output.add(printObservation(response.getObservation()));
+			}else {
+				TrackMatchResponse response = _frontend.trackMatch(arguments[1], arguments[2]);
+				output = response.getObservationsList()
+						.stream()
+						.sorted(getComparator(response))
+						.map(SpotterApp::printObservation)
+						.collect(Collectors.toList());
+			}
 			printResult(output);
 			System.out.println("Success!");
 		} catch(SauronException e) {
@@ -110,8 +121,10 @@ public class SpotterApp {
 			return;
 		}
 		try {
-			List<String> output  = _frontend.trace(arguments[1], arguments[2]);
-			printResult(output);
+			TraceResponse response =  _frontend.trace(arguments[1], arguments[2]);
+			printResult(response.getObservationsList().stream()
+					.map(SpotterApp::printObservation)
+					.collect(Collectors.toList()));
 			System.out.println("Success!");
 		} catch(SauronException e){
 			System.out.println("Invalid usage of trail - " + reactToException(e));
@@ -183,6 +196,40 @@ public class SpotterApp {
 
 	private static void printResult(List<String> output) {
 		output.forEach(System.out::println);
+	}
+
+	private static Comparator<Observation> getComparator(TrackMatchResponse response) {
+		ObjectType type = response.getObservationsCount() == 0 ?
+				ObjectType.CAR : response.getObservations(0).getObject().getType();
+		switch (type) {
+			case PERSON:
+				return Comparator.comparingLong(obs -> Long.parseLong(obs.getObject().getId()));
+			case CAR:
+				return Comparator.comparing(obs -> obs.getObject().getId());
+			default:
+				return Comparator.comparing(Observation::toString);
+		}
+	}
+
+	private static String printObservation(Observation obs) {
+		String ts = Timestamps.toString(obs.getTimestamp());
+		return typeToString(obs.getObject().getType()) + ","
+				+ obs.getObject().getId() + ","
+				+ ts.substring(0, ts.lastIndexOf('.')) + ","
+				+ obs.getCam().getName() + ","
+				+ obs.getCam().getCoordinates().getLatitude() + ","
+				+ obs.getCam().getCoordinates().getLongitude();
+	}
+
+	private static String typeToString(ObjectType type) {
+		switch (type){
+			case PERSON:
+				return "person";
+			case CAR:
+				return "car";
+			default:
+				return "<UNRECOGNIZED>";
+		}
 	}
 
 	private static String reactToException(SauronException e) {
