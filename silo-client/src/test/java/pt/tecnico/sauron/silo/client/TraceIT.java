@@ -29,7 +29,7 @@ public class TraceIT extends BaseIT {
     private static final String CAM_TAGUS = "Tagus";
     private static final String CAM_ALAMEDA = "Alameda";
     private static final String CAM_FCT = "FCT";
-
+    private static final String BLANC = "";
 
     // one-time initialization and clean-up
     @BeforeAll
@@ -125,6 +125,39 @@ public class TraceIT extends BaseIT {
         }
         catch (SauronException e) {
             Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
+        }
+    }
+
+    @Test
+    public void traceNOK_EmptyType() {
+        try {
+            List<String> result = frontend.trace(BLANC, PERSON_ID_1);
+            Assertions.assertTrue(result.isEmpty());
+        }
+        catch (SauronException e) {
+            Assertions.assertEquals(ErrorMessage.TYPE_DOES_NOT_EXIST, e.getErrorMessage());
+        }
+    }
+
+    @Test
+    public void traceNOK_EmptyId_Person() {
+        try {
+            List<String> result = frontend.trace(PERSON_TYPE, BLANC);
+            Assertions.assertTrue(result.isEmpty());
+        }
+        catch (SauronException e) {
+            Assertions.assertEquals(ErrorMessage.INVALID_PERSON_ID, e.getErrorMessage());
+        }
+    }
+
+    @Test
+    public void traceNOK_EmptyId_car() {
+        try {
+            List<String> result = frontend.trace(CAR_TYPE, BLANC);
+            Assertions.assertTrue(result.isEmpty());
+        }
+        catch (SauronException e) {
+            Assertions.assertEquals(ErrorMessage.INVALID_CAR_ID, e.getErrorMessage());
         }
     }
 

@@ -21,9 +21,10 @@ public class CamJoinIT extends BaseIT{
     private static final String LONG_NAME = "camcamcacmacmcam";
     private static final String NULL_NAME = null;
     private static final String SYMBOLIC_NAME = "cam-cam";
-    private static final double INVALID_LAT = 91.0;
-    private static final double INVALID_LON = 181.0;
-
+    private static final double INVALID_LAT_SUP = 91.0;
+    private static final double INVALID_LON_SUP = 181.0;
+    private static final double INVALID_LAT_INF = -91.0;
+    private static final double INVALID_LON_INF = -181.0;
 
 
     @BeforeAll
@@ -118,10 +119,28 @@ public class CamJoinIT extends BaseIT{
     }
 
     @Test
-    public void camJoinNOK_invalidCoords() {
-        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT, INVALID_LON));
+    public void camJoinNOK_invalidSupCoords() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_SUP));
         Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
-        assertCamSaved(NAME_ALAMEDA, INVALID_LAT, INVALID_LON, false);
+        assertCamSaved(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_SUP, false);
+    }
+
+    @Test
+    public void camJoinNOK_invalidInfCoords() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT_INF, INVALID_LON_INF));
+        Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, INVALID_LAT_INF, INVALID_LON_INF, false);
+    }
+
+    @Test
+    public void camJoinNOK_invalidMixCoords() {
+        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT_INF, INVALID_LON_SUP));
+        Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, INVALID_LAT_INF, INVALID_LON_SUP, false);
+
+        e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_INF));
+        Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
+        assertCamSaved(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_INF, false);
     }
 
     @Test
