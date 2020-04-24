@@ -29,11 +29,13 @@ public class SiloServerApp {
 		final String host = args[2];
 		final String port = args[3];
 		final String path = args[4];
-		final String replicaNum = args[5];
-		final BindableService impl = new SiloServerImpl();
+		final int replicaNum;
+		final BindableService impl;
 
 		ZKNaming zkNaming = null;
 		try {
+			replicaNum = Integer.parseInt(args[5]);
+			impl = new SiloServerImpl(replicaNum);
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			// publish
 			zkNaming.rebind(path, host, port);

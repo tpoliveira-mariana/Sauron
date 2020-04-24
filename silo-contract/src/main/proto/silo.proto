@@ -12,6 +12,10 @@ enum ObjectType {
     PERSON = 1;
 }
 
+message VectorTS {
+    repeated int32 ts = 1;
+}
+
 message Coordinates {
     double latitude = 1;
     double longitude = 2;
@@ -37,9 +41,12 @@ message Observation {
 message CamJoinRequest {
     string name = 1;
     Coordinates coordinates = 2;
+    VectorTS vector = 3;
 }
 
-message CamJoinResponse {}
+message CamJoinResponse {
+    VectorTS vector = 3;
+}
 
 message CamInfoRequest {
     string name = 1;
@@ -47,14 +54,18 @@ message CamInfoRequest {
 
 message CamInfoResponse {
     Coordinates coordinates = 1;
+    VectorTS vector = 2;
 }
 
 message ReportRequest {
     string name = 1;
     repeated Object object = 2;
+    VectorTS vector = 3;
 }
 
-message ReportResponse {}
+message ReportResponse {
+    VectorTS vector = 3;
+}
 
 message TrackRequest {
     ObjectType type = 1;
@@ -62,7 +73,8 @@ message TrackRequest {
 }
 
 message TrackResponse {
-    Observation observation = 2;
+    Observation observation = 1;
+    VectorTS vector = 2;
 }
 
 message TrackMatchRequest {
@@ -72,6 +84,7 @@ message TrackMatchRequest {
 
 message TrackMatchResponse {
     repeated Observation observations = 1;
+    VectorTS vector = 2;
 }
 
 message TraceRequest {
@@ -81,9 +94,8 @@ message TraceRequest {
 
 message TraceResponse {
     repeated Observation observations = 1;
+    VectorTS vector = 2;
 }
-
-
 
 message PingRequest {
     string input = 1;

@@ -34,9 +34,14 @@ public class SiloFrontend {
 
     private final ZKNaming nameServer;
     private String serverPath="/grpc/sauron/silo";
+    private int[] prevTS;
+    private final int replicaNum;
 
     public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException {
         nameServer = new ZKNaming(zooHost,zooPort);
+        List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(serverPath));
+        replicaNum = replicas.size();
+        prevTS = new int[replicaNum];
         connect(instance);
     }
 

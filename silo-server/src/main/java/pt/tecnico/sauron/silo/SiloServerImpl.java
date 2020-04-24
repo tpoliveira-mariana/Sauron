@@ -13,6 +13,7 @@ import pt.tecnico.sauron.silo.grpc.*;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -29,6 +30,17 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
+
+    private final List<CamJoinRequest> joinLog = new ArrayList<>();
+    private final List<ReportRequest> reportLog = new ArrayList<>();
+    private int[] replicaTS;
+    private int[] valueTS;
+
+
+    public SiloServerImpl(int replicaNum) {
+        this.valueTS = new int[replicaNum];
+        this.replicaTS = new int[replicaNum];
+    }
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
