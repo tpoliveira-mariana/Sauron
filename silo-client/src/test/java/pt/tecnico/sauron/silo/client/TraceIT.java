@@ -131,7 +131,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_EmptyType() {
         try {
-            List<String> result = frontend.trace(BLANC, PERSON_ID_1);
+            TraceResponse response = frontend.trace(BLANC, PERSON_ID_1);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
@@ -142,7 +145,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_EmptyId_Person() {
         try {
-            List<String> result = frontend.trace(PERSON_TYPE, BLANC);
+            TraceResponse response = frontend.trace(PERSON_TYPE, BLANC);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
@@ -153,7 +159,10 @@ public class TraceIT extends BaseIT {
     @Test
     public void traceNOK_EmptyId_car() {
         try {
-            List<String> result = frontend.trace(CAR_TYPE, BLANC);
+            TraceResponse response = frontend.trace(CAR_TYPE, BLANC);
+            List<String> result = response.getObservationsList().stream()
+                    .map(TraceIT::printObservation)
+                    .collect(Collectors.toList());
             Assertions.assertTrue(result.isEmpty());
         }
         catch (SauronException e) {
