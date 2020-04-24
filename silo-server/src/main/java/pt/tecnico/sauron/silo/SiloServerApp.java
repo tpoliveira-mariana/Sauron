@@ -20,15 +20,16 @@ public class SiloServerApp {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		if (args.length < 5) {
+		if (args.length < 6) {
 			System.out.println("Argument missing!");
 			return;
 		}
 		final String zooHost = args[0];
 		final String zooPort = args[1];
-		final String path = args[2];
-		final String host = args[3];
-		final String port = args[4];
+		final String host = args[2];
+		final String port = args[3];
+		final String path = args[4];
+		final String replicaNum = args[5];
 		final BindableService impl = new SiloServerImpl();
 
 		ZKNaming zkNaming = null;
@@ -49,7 +50,7 @@ public class SiloServerApp {
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
 		} catch (ZKNamingException e) {
-			System.out.println("Can't start server - Zookeeper error.");
+			System.out.println(e.getMessage());
 			Thread.currentThread().interrupt();
 		} finally  {
 			if (zkNaming != null) {

@@ -21,6 +21,7 @@
 
 		<!-- instance number -->
 		<instance>1</instance>
+		<replicaNum>1</replicaNum>
 
 		<server.host>localhost</server.host>
 		<server.port>808${instance}</server.port>
@@ -92,6 +93,7 @@
 						<argument>${server.host}</argument>
 						<argument>${server.port}</argument>
 						<argument>${server.path}</argument>
+						<replicaNum>${replicaNum}</replicaNum>
 					</arguments>
 				</configuration>
 			</plugin>

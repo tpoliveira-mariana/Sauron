@@ -33,7 +33,7 @@ public class EyeApp {
 		}
 
 		try {
-			_frontend = new SiloFrontend(args[0], args[1], args[2]);
+			_frontend = new SiloFrontend(args[0], args[1]);
 
 			String cameraName = args[2];
 			double lat = Double.parseDouble(args[3]);

@@ -32,10 +32,22 @@ public class SiloFrontend {
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
-    public SiloFrontend(String zooHost, String zooPort, String path) throws ZKNamingException {
-        ZKNaming zkNaming = new ZKNaming(zooHost,zooPort);
-        // lookup
-        ZKRecord record = zkNaming.lookup(path);
+    private final ZKNaming nameServer;
+    private final String serverPath;
+
+    public SiloFrontend(String zooHost, String zooPort, String path, int instance) throws ZKNamingException {
+        nameServer = new ZKNaming(zooHost,zooPort);
+        serverPath = path;
+        connect(instance);
+    }
+
+    private void connect(int instance) throws ZKNamingException{
+        String path = serverPath + instance;
+        if (instance == -1) {
+            List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(serverPath));
+            path = replicas.get((new Random()).nextInt(9)).getPath();
+        }
+        ZKRecord record = nameServer.lookup(path);
         String target = record.getURI();
         final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         _stub = SauronGrpc.newBlockingStub(channel);
