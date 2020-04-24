@@ -26,13 +26,14 @@ public class SpotterApp {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		if (args.length != 3) {
+		if (args.length > 3 || args.length < 2) {
 			System.out.println("Invalid Number of arguments!");
 			System.out.printf("Usage: java %s host port%n", SpotterApp.class.getSimpleName());
 			return;
 		}
 		try {
-			_frontend = new SiloFrontend(args[0], args[1], args[2]);
+			int instance = (args.length == 3 && args[2] != null ? Integer.parseInt(args[2]) : -1);
+			_frontend = new SiloFrontend(args[0], args[1], instance);
 			waitInput();
 		} catch (NumberFormatException e) {
 			System.out.println("Invalid number provided.");

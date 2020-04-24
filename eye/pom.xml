@@ -19,12 +19,11 @@
 		<!-- see parent POM for more properties -->
 
 		<!-- instance number -->
-		<instance>1</instance>
+		<instance>-1</instance>
 
 		<mainclass>pt.tecnico.sauron.eye.EyeApp</mainclass>
 		<zoo.host>localhost</zoo.host>
 		<zoo.port>2181</zoo.port>
-		<server.path>/grpc/sauron/silo/${instance}</server.path>
 	</properties>
 
 	<dependencies>
@@ -84,7 +83,7 @@
 					<arguments>
 						<argument>${zoo.host}</argument>
 						<argument>${zoo.port}</argument>
-						<argument>${server.path}</argument>
+						<argument>${instance}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

@@ -33,19 +33,19 @@ public class SiloFrontend {
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
     private final ZKNaming nameServer;
-    private final String serverPath;
+    private String serverPath="/grpc/sauron/silo";
 
-    public SiloFrontend(String zooHost, String zooPort, String path, int instance) throws ZKNamingException {
+    public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException {
         nameServer = new ZKNaming(zooHost,zooPort);
-        serverPath = path;
         connect(instance);
     }
 
-    private void connect(int instance) throws ZKNamingException{
-        String path = serverPath + instance;
+    public void connect(int instance) throws ZKNamingException{
+        String path = serverPath + "/" + instance;
         if (instance == -1) {
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(serverPath));
-            path = replicas.get((new Random()).nextInt(9)).getPath();
+            System.out.println(path);
+            path = replicas.get((new Random()).nextInt(replicas.size())).getPath();
         }
         ZKRecord record = nameServer.lookup(path);
         String target = record.getURI();

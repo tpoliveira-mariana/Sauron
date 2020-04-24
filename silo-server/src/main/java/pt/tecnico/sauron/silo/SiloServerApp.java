@@ -36,7 +36,7 @@ public class SiloServerApp {
 		try {
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			// publish
-			zkNaming.bind(path, host, port);
+			zkNaming.rebind(path, host, port);
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
 			// Start the server

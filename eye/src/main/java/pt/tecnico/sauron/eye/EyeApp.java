@@ -26,18 +26,19 @@ public class EyeApp {
 		}
 
 		// check arguments
-		if (args.length < 6) {
+		if (args.length > 6 || args.length < 5) {
 			System.out.println("Argument(s) missing!");
 			System.out.printf("Usage: java eye host port cameraName latitude longitude%n");
 			return ;
 		}
 
 		try {
-			_frontend = new SiloFrontend(args[0], args[1]);
+			int instance = (args.length == 6 && args[2] != null ? Integer.parseInt(args[2]) : -1);
+			_frontend = new SiloFrontend(args[0], args[1], instance);
 
-			String cameraName = args[2];
-			double lat = Double.parseDouble(args[3]);
-			double lon = Double.parseDouble(args[4]);
+			String cameraName = args[3];
+			double lat = Double.parseDouble(args[4]);
+			double lon = Double.parseDouble(args[5]);
 
 			processCameraObservations(cameraName, lat, lon);
 		}

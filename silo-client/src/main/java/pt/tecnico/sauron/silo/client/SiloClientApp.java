@@ -15,7 +15,7 @@ public class SiloClientApp {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		if (args.length != 3) {
+		if (args.length > 3 || args.length < 2) {
 			System.out.println("Invalid Number of arguments!");
 			System.out.printf("Usage: java %s host port [message]%n", SiloClientApp.class.getSimpleName());
 			return;
@@ -23,7 +23,8 @@ public class SiloClientApp {
 
 		try {
 			String msg = "SiloClientApp";
-			SiloFrontend frontend = new SiloFrontend(args[0], args[1], args[2]);
+			int instance = (args.length == 3 && args[2] != null ? Integer.parseInt(args[2]) : -1);
+			SiloFrontend frontend = new SiloFrontend(args[0], args[1], instance);
 
 			String response = frontend.ctrlPing(msg);
 			System.out.println(response);
