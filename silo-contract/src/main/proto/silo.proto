@@ -45,7 +45,7 @@ message CamJoinRequest {
 }
 
 message CamJoinResponse {
-    VectorTS vector = 3;
+    VectorTS vector = 1;
 }
 
 message CamInfoRequest {
@@ -64,7 +64,7 @@ message ReportRequest {
 }
 
 message ReportResponse {
-    VectorTS vector = 3;
+    VectorTS vector = 1;
 }
 
 message TrackRequest {

@@ -1,6 +1,8 @@
 package pt.tecnico.sauron.silo;
 
 
+import com.google.protobuf.Any;
+import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.stub.StreamObserver;
@@ -14,7 +16,9 @@ import pt.tecnico.sauron.silo.grpc.*;
 import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -31,25 +35,28 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
-    private final List<CamJoinRequest> joinLog = new ArrayList<>();
-    private final List<ReportRequest> reportLog = new ArrayList<>();
-    //private int[] prevTS;
-    private int[] valueTS;
+    private List<Any> updateLog = new ArrayList<>();
+    private List<Integer> replicaTS;
+    private List<Integer> valueTS;
+    private int replicaNum;
 
 
     public SiloServerImpl(int replicaNum) {
-        this.valueTS = new int[replicaNum];
-        //this.prevTS = new int[replicaNum];
+        this.replicaNum= replicaNum;
+        this.valueTS = new ArrayList<>(replicaNum);
+        this.replicaTS = new ArrayList<>(replicaNum);
     }
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
+        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
+
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
 
-            CamJoinResponse response = builder.build();
+            CamJoinResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
@@ -76,6 +83,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
+        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
+
         ReportResponse.Builder builder = ReportResponse.newBuilder();
         SauronCamera cam;
         try {
@@ -106,7 +115,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 }
             }
             if (!error) {
-                ReportResponse response = builder.build();
+                ReportResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
@@ -318,4 +327,27 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
+    private boolean tsAfter(List<Integer> ts1, List<Integer> ts2) {
+        for (int i = 0; i < ts1.size(); i++) {
+            if (ts1.get(i) < ts2.get(i))
+                return false;
+        }
+        return true;
+    }
+
+    private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
+
+        // update replicaTS
+        this.replicaTS.set(this.replicaNum -1, this.replicaTS.get(this.replicaNum) + 1);
+
+        // build updateID to return
+        List<Integer> updateID = new ArrayList<>(this.valueTS.size());
+        updateID.addAll(prevTS);
+        updateID.set(this.replicaNum -1, this.replicaTS.get(replicaNum -1));
+
+        // add request to log
+        this.updateLog.add(request);
+
+        return updateID;
+    }
 }
