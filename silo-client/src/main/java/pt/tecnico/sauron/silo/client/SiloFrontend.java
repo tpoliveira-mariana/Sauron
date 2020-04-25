@@ -71,10 +71,12 @@ public class SiloFrontend {
             Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
             CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
 
-            _stub.camJoin(request);
+            CamJoinResponse response = _stub.camJoin(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            getConsistentResponse(response, valueTS, "camJoin"+name+lat+lon, CamJoinResponse.class);
         }
         catch (StatusRuntimeException e) {
-            throw properException(e);
+            getConsistentError(e, "camJoin"+name+lat+lon, CamJoinResponse.class);
         }
     }
 
@@ -86,7 +88,7 @@ public class SiloFrontend {
 
             CamInfoResponse response = _stub.camInfo(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            response =  getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
+            response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
             /*if (this.tsAfter(valueTS, this.prevTS)) {
                 this.prevTS = valueTS;
                 responses.put("camInfo"+name, Any.pack(response));
@@ -97,7 +99,8 @@ public class SiloFrontend {
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
         catch (StatusRuntimeException e) {
-            throw properException(e);
+            CamInfoResponse response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
+            return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }/* catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
         }*/
@@ -107,6 +110,10 @@ public class SiloFrontend {
         checkCameraName(name);
         boolean error = false;
         ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
+        String query = "";
+        for (List<String> observation : observations)
+            query += observation.get(0) + observation.get(1);
+
         try {
             ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
             for (List<String> observation : observations) {
@@ -123,10 +130,13 @@ public class SiloFrontend {
             }
 
             ReportRequest request = builder.build();
-            _stub.report(request);
+
+            ReportResponse response = _stub.report(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            getConsistentResponse(response, valueTS, query, ReportResponse.class);
         }
         catch (StatusRuntimeException e) {
-            throw properException(e);
+            getConsistentError(e, query, ReportResponse.class);
         }
         if (error)
             throw new SauronException(errorMessage);
