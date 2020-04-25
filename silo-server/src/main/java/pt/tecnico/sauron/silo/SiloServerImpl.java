@@ -15,10 +15,7 @@ import pt.tecnico.sauron.silo.grpc.*;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -43,8 +40,9 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     public SiloServerImpl(int replicaNum, int instance) {
         this.instance = instance;
-        this.valueTS = new ArrayList<>(replicaNum);
-        this.replicaTS = new ArrayList<>(replicaNum);
+        this.valueTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
+        this.replicaTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
+        System.out.println("valueTS: " + this.valueTS);
     }
 
     @Override
@@ -72,7 +70,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             SauronCamera cam = silo.getCamByName(request.getName());
             builder.setCoordinates(Coordinates.newBuilder().setLatitude(cam.getLatitude()).setLongitude(cam.getLongitude()).build());
 
-            CamInfoResponse response = builder.build();
+            CamInfoResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(this.valueTS).build()).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
@@ -131,7 +129,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
             builder.setObservation(buildObs(sauObs));
 
-            TrackResponse response = builder.build();
+            TrackResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(this.valueTS).build()).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
@@ -154,7 +152,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             else {
                 builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
 
-                TrackMatchResponse response = builder.build();
+                TrackMatchResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(this.valueTS).build()).build();
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
             }
@@ -173,7 +171,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
             builder.addAllObservations(sauObs.stream().map(this::buildObs).collect(Collectors.toList()));
 
-            TraceResponse response = builder.build();
+            TraceResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(this.valueTS).build()).build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
 
@@ -338,12 +336,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
 
         // update replicaTS
-        this.replicaTS.set(this.instance -1, this.replicaTS.get(this.instance) + 1);
+        int i = this.instance -1;
+        this.replicaTS.set(i, this.replicaTS.get(i) + 1);
 
         // build updateID to return
-        List<Integer> updateID = new ArrayList<>(this.valueTS.size());
+        List<Integer> updateID = new ArrayList<>();
         updateID.addAll(prevTS);
-        updateID.set(this.instance -1, this.replicaTS.get(instance -1));
+        updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
         this.updateLog.add(request);

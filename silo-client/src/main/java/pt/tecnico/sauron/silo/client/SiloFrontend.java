@@ -44,7 +44,7 @@ public class SiloFrontend {
         nameServer = new ZKNaming(zooHost,zooPort);
         List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
         replicaNum = replicas.size();
-        prevTS = new ArrayList<>(replicaNum);
+        prevTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
         connect(instance);
     }
 
@@ -66,7 +66,10 @@ public class SiloFrontend {
 
         try {
             Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
-            CamJoinRequest request = CamJoinRequest.newBuilder().setName(name).setCoordinates(coordinates).build();
+            CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
+                                                                .setCoordinates(coordinates)
+                                                                .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+                                                                .build();
 
             CamJoinResponse response = _stub.camJoin(request);
             List<Integer> valueTS = response.getVector().getTsList();
@@ -117,7 +120,8 @@ public class SiloFrontend {
                 try {
                     checkObjectArguments(observation.get(0), observation.get(1), false);
                     ObjectType type = stringToType(observation.get(0));
-                    Object builderObj = Object.newBuilder().setType(type).setId(observation.get(1)).build();
+                    Object builderObj = Object.newBuilder().setType(type)
+                                                           .setId(observation.get(1)).build();
                     builder.addObject(builderObj);
                 } catch (SauronException e){
                     if (!error)
@@ -126,7 +130,7 @@ public class SiloFrontend {
                 }
             }
 
-            ReportRequest request = builder.build();
+            ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build()).build();
 
             ReportResponse response = _stub.report(request);
             List<Integer> valueTS = response.getVector().getTsList();
@@ -296,10 +300,11 @@ public class SiloFrontend {
 
     private <T extends Message> T getConsistentError(StatusRuntimeException exception, String query, Class<T> responseClass) throws SauronException {
         try {
-            T response = responses.get(query).unpack(responseClass);
-            if (response == null)
+            Any response = responses.get(query);
+            if (response == null) {
                 throw properException(exception);
-            return response;
+            }
+            return response.unpack(responseClass);
         } catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
         }
@@ -312,7 +317,10 @@ public class SiloFrontend {
                 responses.put(query, Any.pack(response));
                 return response;
             } else {
-                return responses.get(query).unpack(responseClass);
+                if (responses.get(query) != null) {
+                    return responses.get(query).unpack(responseClass);
+                }
+                throw new SauronException(ErrorMessage.UNKNOWN);
             }
         } catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);

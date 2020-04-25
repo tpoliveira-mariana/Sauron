@@ -10,7 +10,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import java.io.IOException;
 
 public class SiloServerApp {
-	private static final String PATH = "/grpc/sauron/silo";
+	private static final String PATH = "/grpc/sauron/silo/";
 	
 	public static void main(String[] args) {
 		System.out.println(SiloServerApp.class.getSimpleName());
