@@ -1,5 +1,7 @@
 package pt.tecnico.sauron.silo.client;
 
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -33,22 +35,24 @@ public class SiloFrontend {
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
     private final ZKNaming nameServer;
-    private String serverPath="/grpc/sauron/silo";
-    private int[] prevTS;
+    private static final String SERVER_PATH = "/grpc/sauron/silo";
+    private List<Integer> prevTS;
     private final int replicaNum;
+
+    private Map<String, Any> responses = new HashMap<>();
 
     public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException {
         nameServer = new ZKNaming(zooHost,zooPort);
-        List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(serverPath));
+        List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
         replicaNum = replicas.size();
-        prevTS = new int[replicaNum];
+        prevTS = new ArrayList<>(replicaNum);
         connect(instance);
     }
 
     public void connect(int instance) throws ZKNamingException{
-        String path = serverPath + "/" + instance;
+        String path = SERVER_PATH + "/" + instance;
         if (instance == -1) {
-            List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(serverPath));
+            List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
             System.out.println(path);
             path = replicas.get((new Random()).nextInt(replicas.size())).getPath();
         }
@@ -79,11 +83,20 @@ public class SiloFrontend {
             CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
 
             CamInfoResponse response = _stub.camInfo(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            if (this.tsAfter(valueTS, this.prevTS)) {
+                this.prevTS = valueTS;
+                responses.put("camInfo"+name, Any.pack(response));
+            } else {
+                response = responses.get("camInfo"+name).unpack(CamInfoResponse.class);
+            }
 
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
         catch (StatusRuntimeException e) {
             throw properException(e);
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
         }
     }
 
@@ -124,10 +137,20 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            return _stub.track(request);
-        }
-        catch (StatusRuntimeException e) {
+            TrackResponse response = _stub.track(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            if (this.tsAfter(valueTS, this.prevTS)) {
+                this.prevTS = valueTS;
+                responses.put("track"+type+id, Any.pack(response));
+                return response;
+            } else {
+                return responses.get("track"+type+id).unpack(TrackResponse.class);
+            }
+
+        } catch (StatusRuntimeException e) {
             throw properException(e);
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
         }
 
     }
@@ -140,10 +163,19 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            return _stub.trackMatch(request);
-        }
-        catch (StatusRuntimeException e) {
+            TrackMatchResponse response = _stub.trackMatch(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            if (this.tsAfter(valueTS, this.prevTS)) {
+                this.prevTS = valueTS;
+                responses.put("trackMatch"+type+id, Any.pack(response));
+                return response;
+            } else {
+                return responses.get("trackMatch"+type+id).unpack(TrackMatchResponse.class);
+            }
+        } catch (StatusRuntimeException e) {
             throw properException(e);
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
         }
     }
 
@@ -155,10 +187,20 @@ public class SiloFrontend {
                     .setId(id)
                     .build();
 
-            return  _stub.trace(request);
-        }
-        catch (StatusRuntimeException e) {
+            TraceResponse response = _stub.trace(request);
+            List<Integer> valueTS = response.getVector().getTsList();
+            if (this.tsAfter(valueTS, this.prevTS)) {
+                this.prevTS = valueTS;
+                responses.put("trace"+type+id, Any.pack(response));
+                return response;
+            } else {
+                return responses.get("trace"+type+id).unpack(TraceResponse.class);
+            }
+
+        } catch (StatusRuntimeException e) {
             throw properException(e);
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
         }
     }
 
@@ -231,6 +273,15 @@ public class SiloFrontend {
             return new SauronException(ErrorMessage.REFUSED);
         }
         return reactToStatus(e.getStatus().getDescription());
+    }
+
+
+    private boolean tsAfter(List<Integer> ts1, List<Integer> ts2) {
+        for (int i = 0; i < ts1.size(); i++) {
+            if (ts1.get(i) < ts2.get(i))
+                return false;
+        }
+        return true;
     }
 
 

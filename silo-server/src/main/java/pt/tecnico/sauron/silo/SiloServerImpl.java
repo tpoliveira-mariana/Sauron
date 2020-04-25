@@ -33,13 +33,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     private final List<CamJoinRequest> joinLog = new ArrayList<>();
     private final List<ReportRequest> reportLog = new ArrayList<>();
-    private int[] replicaTS;
+    //private int[] prevTS;
     private int[] valueTS;
 
 
     public SiloServerImpl(int replicaNum) {
         this.valueTS = new int[replicaNum];
-        this.replicaTS = new int[replicaNum];
+        //this.prevTS = new int[replicaNum];
     }
 
     @Override
