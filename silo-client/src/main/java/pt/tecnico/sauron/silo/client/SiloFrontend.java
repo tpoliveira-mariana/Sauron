@@ -1,7 +1,9 @@
 package pt.tecnico.sauron.silo.client;
 
 import com.google.protobuf.Any;
+import com.google.protobuf.GeneratedMessageV3;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -84,20 +86,21 @@ public class SiloFrontend {
 
             CamInfoResponse response = _stub.camInfo(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            if (this.tsAfter(valueTS, this.prevTS)) {
+            response =  getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
+            /*if (this.tsAfter(valueTS, this.prevTS)) {
                 this.prevTS = valueTS;
                 responses.put("camInfo"+name, Any.pack(response));
             } else {
                 response = responses.get("camInfo"+name).unpack(CamInfoResponse.class);
-            }
+            }*/
 
             return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
         }
         catch (StatusRuntimeException e) {
             throw properException(e);
-        } catch (InvalidProtocolBufferException e) {
+        }/* catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
-        }
+        }*/
     }
 
     public void report(String name, List<List<String>> observations) throws SauronException{
@@ -139,19 +142,19 @@ public class SiloFrontend {
 
             TrackResponse response = _stub.track(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            if (this.tsAfter(valueTS, this.prevTS)) {
+            return getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
+            /*if (this.tsAfter(valueTS, this.prevTS)) {
                 this.prevTS = valueTS;
                 responses.put("track"+type+id, Any.pack(response));
                 return response;
             } else {
                 return responses.get("track"+type+id).unpack(TrackResponse.class);
-            }
-
+            }*/
         } catch (StatusRuntimeException e) {
-            throw properException(e);
-        } catch (InvalidProtocolBufferException e) {
+            return getConsistentError(e, "track"+type+id, TrackResponse.class);
+        }/* catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
-        }
+        }*/
 
     }
 
@@ -165,18 +168,19 @@ public class SiloFrontend {
 
             TrackMatchResponse response = _stub.trackMatch(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            if (this.tsAfter(valueTS, this.prevTS)) {
+            return getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
+            /*if (this.tsAfter(valueTS, this.prevTS)) {
                 this.prevTS = valueTS;
                 responses.put("trackMatch"+type+id, Any.pack(response));
                 return response;
             } else {
                 return responses.get("trackMatch"+type+id).unpack(TrackMatchResponse.class);
-            }
+            }*/
         } catch (StatusRuntimeException e) {
-            throw properException(e);
-        } catch (InvalidProtocolBufferException e) {
+            return getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
+        }/* catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
-        }
+        }*/
     }
 
     public TraceResponse trace(String type, String id) throws SauronException {
@@ -189,19 +193,20 @@ public class SiloFrontend {
 
             TraceResponse response = _stub.trace(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            if (this.tsAfter(valueTS, this.prevTS)) {
+            return getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
+            /*if (this.tsAfter(valueTS, this.prevTS)) {
                 this.prevTS = valueTS;
                 responses.put("trace"+type+id, Any.pack(response));
                 return response;
             } else {
                 return responses.get("trace"+type+id).unpack(TraceResponse.class);
-            }
+            }*/
 
         } catch (StatusRuntimeException e) {
-            throw properException(e);
-        } catch (InvalidProtocolBufferException e) {
+            return getConsistentError(e, "trace"+type+id, TraceResponse.class);
+        }/* catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
-        }
+        }*/
     }
 
     public String ctrlPing(String input) throws SauronException {
@@ -261,8 +266,6 @@ public class SiloFrontend {
             }
             scanner.close();
 
-        } catch (SauronException e) {
-            throw e;
         } catch (FileNotFoundException e) {
             throw new SauronException(ErrorMessage.ERROR_PROCESSING_FILE);
         }
@@ -282,6 +285,31 @@ public class SiloFrontend {
                 return false;
         }
         return true;
+    }
+
+    private <T extends Message> T getConsistentError(StatusRuntimeException exception, String query, Class<T> responseClass) throws SauronException {
+        try {
+            T response = responses.get(query).unpack(responseClass);
+            if (response == null)
+                throw properException(exception);
+            return response;
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
+        }
+    }
+
+    private <T extends Message> T getConsistentResponse(T response, List<Integer> valueTS, String query, Class<T> responseClass) throws SauronException {
+        try {
+            if (this.tsAfter(valueTS, this.prevTS)) {
+                this.prevTS = valueTS;
+                responses.put(query, Any.pack(response));
+                return response;
+            } else {
+                return responses.get(query).unpack(responseClass);
+            }
+        } catch (InvalidProtocolBufferException e) {
+            throw new SauronException(ErrorMessage.UNKNOWN);
+        }
     }
 
 
