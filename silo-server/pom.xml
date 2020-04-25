@@ -25,7 +25,6 @@
 
 		<server.host>localhost</server.host>
 		<server.port>808${instance}</server.port>
-		<server.path>/grpc/sauron/silo/${instance}</server.path>
 		<mainclass>pt.tecnico.sauron.silo.SiloServerApp</mainclass>
 	</properties>
 
@@ -90,10 +89,10 @@
 					<arguments>
 						<argument>${zoo.host}</argument>
 						<argument>${zoo.port}</argument>
+						<argument>${instance}</argument>
 						<argument>${server.host}</argument>
 						<argument>${server.port}</argument>
-						<argument>${server.path}</argument>
-						<replicaNum>${replicaNum}</replicaNum>
+						<argument>${replicaNum}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

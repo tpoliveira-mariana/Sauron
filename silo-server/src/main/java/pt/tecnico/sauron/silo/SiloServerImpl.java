@@ -38,11 +38,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Any> updateLog = new ArrayList<>();
     private List<Integer> replicaTS;
     private List<Integer> valueTS;
-    private int replicaNum;
+    private int instance;
 
 
-    public SiloServerImpl(int replicaNum) {
-        this.replicaNum= replicaNum;
+    public SiloServerImpl(int replicaNum, int instance) {
+        this.instance = instance;
         this.valueTS = new ArrayList<>(replicaNum);
         this.replicaTS = new ArrayList<>(replicaNum);
     }
@@ -338,12 +338,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
 
         // update replicaTS
-        this.replicaTS.set(this.replicaNum -1, this.replicaTS.get(this.replicaNum) + 1);
+        this.replicaTS.set(this.instance -1, this.replicaTS.get(this.instance) + 1);
 
         // build updateID to return
         List<Integer> updateID = new ArrayList<>(this.valueTS.size());
         updateID.addAll(prevTS);
-        updateID.set(this.replicaNum -1, this.replicaTS.get(replicaNum -1));
+        updateID.set(this.instance -1, this.replicaTS.get(instance -1));
 
         // add request to log
         this.updateLog.add(request);

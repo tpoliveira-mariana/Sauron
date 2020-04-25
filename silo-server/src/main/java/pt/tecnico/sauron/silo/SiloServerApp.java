@@ -10,6 +10,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import java.io.IOException;
 
 public class SiloServerApp {
+	private static final String PATH = "/grpc/sauron/silo";
 	
 	public static void main(String[] args) {
 		System.out.println(SiloServerApp.class.getSimpleName());
@@ -26,19 +27,21 @@ public class SiloServerApp {
 		}
 		final String zooHost = args[0];
 		final String zooPort = args[1];
-		final String host = args[2];
-		final String port = args[3];
-		final String path = args[4];
+		final int instance;
+		final String host = args[3];
+		final String port = args[4];
 		final int replicaNum;
+
 		final BindableService impl;
 
 		ZKNaming zkNaming = null;
 		try {
+			instance = Integer.parseInt(args[2]);
 			replicaNum = Integer.parseInt(args[5]);
-			impl = new SiloServerImpl(replicaNum);
+			impl = new SiloServerImpl(replicaNum, instance);
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			// publish
-			zkNaming.rebind(path, host, port);
+			zkNaming.rebind(PATH + args[2], host, port);
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
 			// Start the server
@@ -58,7 +61,7 @@ public class SiloServerApp {
 			if (zkNaming != null) {
 				// remove
 				try {
-					zkNaming.unbind(path, host, String.valueOf(port));
+					zkNaming.unbind(PATH + args[2], host, String.valueOf(port));
 				} catch (ZKNamingException e) {
 					Thread.currentThread().interrupt();
 				}
