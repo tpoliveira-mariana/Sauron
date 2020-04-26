@@ -109,6 +109,18 @@ message ClearRequest {}
 
 message ClearResponse {}
 
+message Request{
+    CamJoinRequest camjoin = 1;
+    ReportRequest report = 2;
+    repeated int32 updateTS = 3;
+}
+
+message GossipRequest {
+    repeated Request log = 1;
+    repeated int32 replicaTS = 2;
+}
+
+message GossipResponse {}
 
 
 service Sauron {
@@ -127,4 +139,6 @@ service Sauron {
     rpc CtrlPing(PingRequest) returns (PingResponse);
 
     rpc CtrlClear(ClearRequest) returns (ClearResponse);
+
+    rpc Gossip(GossipRequest) returns (GossipResponse);
 }

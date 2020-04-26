@@ -22,6 +22,7 @@
 		<!-- instance number -->
 		<instance>1</instance>
 		<replicaNum>1</replicaNum>
+		<gossipTimer>30</gossipTimer>
 
 		<server.host>localhost</server.host>
 		<server.port>808${instance}</server.port>
@@ -93,6 +94,7 @@
 						<argument>${server.host}</argument>
 						<argument>${server.port}</argument>
 						<argument>${replicaNum}</argument>
+						<argument>${gossipTimer}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

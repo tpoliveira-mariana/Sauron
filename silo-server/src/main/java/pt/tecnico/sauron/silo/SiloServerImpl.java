@@ -5,6 +5,9 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
@@ -12,6 +15,9 @@ import pt.tecnico.sauron.silo.domain.*;
 import pt.tecnico.sauron.silo.grpc.Object;
 import pt.tecnico.sauron.silo.domain.Silo;
 import pt.tecnico.sauron.silo.grpc.*;
+import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
+import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
@@ -36,12 +42,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> replicaTS;
     private List<Integer> valueTS;
     private int instance;
+    private ZKNaming nameServer;
 
 
-    public SiloServerImpl(int replicaNum, int instance) {
+    public SiloServerImpl(String zooHost, String zooPort, int replicaNum, int instance) {
         this.instance = instance;
         this.valueTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
         this.replicaTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
+        this.nameServer = new ZKNaming(zooHost, zooPort);
         System.out.println("valueTS: " + this.valueTS);
     }
 
@@ -206,6 +214,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public synchronized void gossip(GossipRequest request, StreamObserver<GossipResponse> responseObserver) {
+        //System.out.println("instance-" + this.instance);
+        GossipResponse response = GossipResponse.newBuilder().build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
     private Observation buildObs(SauronObservation sauObs) {
         ObjectType type;
         try {
@@ -349,4 +365,33 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
         return updateID;
     }
+
+    public void performGossip(String replicasPath){
+        String currentPath = replicasPath + "/" + this.instance;
+        List<ZKRecord> replicas;
+        SauronGrpc.SauronBlockingStub stub;
+        ManagedChannel channel;
+        try {
+            replicas = new ArrayList<>(this.nameServer.listRecords(replicasPath));
+        } catch(ZKNamingException e){
+            System.out.println("Cannot perform gossip round - error getting replicas.");
+            return;
+        }
+        for (ZKRecord entry : replicas) {
+            if (!entry.getPath().equals(currentPath)) {
+                try {
+                    ZKRecord record = this.nameServer.lookup(entry.getPath());
+                    String target = record.getURI();
+                    channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+                    stub = SauronGrpc.newBlockingStub(channel);
+                    GossipRequest request = GossipRequest.newBuilder().build();
+                    GossipResponse response = stub.gossip(request);
+                    channel.shutdown();
+                } catch (ZKNamingException | StatusRuntimeException e){}
+            }
+        }
+    }
+
+
+
 }
