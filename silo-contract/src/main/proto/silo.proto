@@ -112,12 +112,13 @@ message ClearResponse {}
 message Request{
     CamJoinRequest camjoin = 1;
     ReportRequest report = 2;
-    repeated int32 updateTS = 3;
+    VectorTS updateTS = 3;
 }
 
 message GossipRequest {
     repeated Request log = 1;
-    repeated int32 replicaTS = 2;
+    VectorTS replicaTS = 2;
+    int32 instance = 3;
 }
 
 message GossipResponse {}
