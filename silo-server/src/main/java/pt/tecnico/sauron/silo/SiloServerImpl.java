@@ -397,7 +397,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private int tsAfter(List<Integer> ts1, List<Integer> ts2) {
+    private int tsCompare(List<Integer> ts1, List<Integer> ts2) {
         boolean before = false;
         boolean after = false;
         for (int i = 0; i < ts1.size(); i++) {
@@ -416,6 +416,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             // all entries of ts1 are lower than ts2
             return -1;
         }
+    }
+
+    private boolean tsAfter(List<Integer> ts1, List<Integer> ts2) {
+        for (int i = 0; i < ts1.size(); i++) {
+            if (ts1.get(i) < ts2.get(i))
+                return false;
+        }
+        return true;
     }
 
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
@@ -475,7 +483,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         List<Request> sendRecords = new ArrayList<>();
         int i = updateLog.size() - 1;
         List<Integer> currentTS = updateLog.get(i).getUpdateTS();
-        while(i != -1 && tsAfter(tableTS.get(newInstance-1), currentTS) != -1) {
+        while(i != -1 && tsAfter(tableTS.get(newInstance-1), currentTS)) {
             currentTS = updateLog.get(i).getUpdateTS();
             Record record = updateLog.get(i);
             VectorTS updateTS = VectorTS.newBuilder().addAllTs(currentTS).build();
@@ -493,7 +501,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             return;
         for (int i=0; i<updateLog.size(); i++) {
             Record record = updateLog.get(i);
-            if (tsAfter(valueTS, record.getPrevTS()) != -1)
+            if (tsAfter(valueTS, record.getPrevTS()))
                 break;
             if (record.isApplied()){
                 checkRecordRemoval(record, i);
@@ -534,12 +542,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private void handleNewRequests(List<Request> requests){
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
-            if (tsAfter(reqTS, valueTS) == 1){
+            if (tsAfter(valueTS, reqTS)){
                 //updateLog.add(request.getRequest()); FIXME- need to create record and add it to the log
             }
             //TODO-missing check to see if the request is already in the list, also no need to check if it can be committed now, will be done at the end of the gossip
         });
-        updateLog.sort((record1, record2) -> tsAfter(record1.getPrevTS(), record2.getPrevTS()));
+        updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
     }
 
     private void mergeTS(List<Integer> newTS){
