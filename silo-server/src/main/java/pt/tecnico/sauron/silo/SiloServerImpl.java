@@ -358,15 +358,25 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private boolean tsAfter(List<Integer> ts1, List<Integer> ts2) {
-        boolean equal = true;
+    private int tsAfter(List<Integer> ts1, List<Integer> ts2) {
+        boolean before = false;
+        boolean after = false;
         for (int i = 0; i < ts1.size(); i++) {
+            if (ts1.get(i) > ts2.get(i))
+                after = true;
             if (ts1.get(i) < ts2.get(i))
-                return false;
-            if (ts1.get(i) != ts2.get(i))
-                equal = false;
+                before = true;
         }
-        return !equal;
+        if (after && before || !after && !before) {
+            //Ts's are both equal or are concurrent(some entries greater than others, other entries lower)
+            return 0;
+        } else if (after){
+            //all entries of ts1 are greater than ts2
+            return 1;
+        } else{
+            // all entries of ts1 are lower than ts2
+            return -1;
+        }
     }
 
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
@@ -389,6 +399,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     public void performGossip(String serverPath){
         List<ZKRecord> replicas;
         //debug-System.out.println("Gossip round!");
+
         try {
             replicas = new ArrayList<>(this.nameServer.listRecords(serverPath));
         } catch(ZKNamingException e){
@@ -396,6 +407,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             return;
         }
         if (replicas.size() == 1)
+            // only replica available is the one calling the method
             return;
         try {
             String currentPath = serverPath + "/" + this.instance;
@@ -430,7 +442,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 else
                     reqTS = report.getVector().getTsList();
 
-                if (tsAfter(valueTS, reqTS)){
+                if (tsAfter(valueTS, reqTS) == 1){
                     //TODO-perform update and remove the request from the log
                 }
             } catch(InvalidProtocolBufferException e){
@@ -442,7 +454,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private void handleNewRequests(List<Request> requests){
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
-            if (tsAfter(reqTS, valueTS)){
+            if (tsAfter(reqTS, valueTS) == 1){
                 updateLog.add(request.getCamjoin() != null ? Any.pack(request.getCamjoin()) : Any.pack(request.getReport()));
             }
             //TODO-missing check to see if the request is already in the list

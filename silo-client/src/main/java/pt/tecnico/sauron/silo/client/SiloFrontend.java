@@ -294,12 +294,25 @@ public class SiloFrontend {
     }
 
 
-    private boolean tsAfter(List<Integer> ts1, List<Integer> ts2) {
+    private int tsAfter(List<Integer> ts1, List<Integer> ts2) {
+        boolean before = false;
+        boolean after = false;
         for (int i = 0; i < ts1.size(); i++) {
+            if (ts1.get(i) > ts2.get(i))
+                after = true;
             if (ts1.get(i) < ts2.get(i))
-                return false;
+                before = true;
         }
-        return true;
+        if (after && before || !after && !before) {
+            //Ts's are both equal or are concurrent(some entries greater than others, other entries lower)
+            return 0;
+        } else if (after){
+            //all entries of ts1 are greater than ts2
+            return 1;
+        } else{
+            // all entries of ts1 are lower than ts2
+            return -1;
+        }
     }
 
     private <T extends Message> T getConsistentError(StatusRuntimeException exception, String query, Class<T> responseClass) throws SauronException {
@@ -316,7 +329,7 @@ public class SiloFrontend {
 
     private <T extends Message> T getConsistentResponse(T response, List<Integer> valueTS, String query, Class<T> responseClass) throws SauronException {
         try {
-            if (this.tsAfter(valueTS, this.prevTS)) {
+            if (this.tsAfter(valueTS, this.prevTS) != -1) {
                 this.prevTS = valueTS;
                 responses.put(query, Any.pack(response));
                 return response;
