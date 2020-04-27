@@ -113,6 +113,7 @@ message Request{
     CamJoinRequest camjoin = 1;
     ReportRequest report = 2;
     VectorTS updateTS = 3;
+    int32 instance = 4;
 }
 
 message GossipRequest {

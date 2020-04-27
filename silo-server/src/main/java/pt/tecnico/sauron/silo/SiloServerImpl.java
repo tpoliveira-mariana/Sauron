@@ -23,10 +23,12 @@ import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.grpc.Status.*;
+import static org.apache.commons.lang.math.RandomUtils.nextInt;
 
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase {
@@ -138,7 +140,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         try {
             checkObjectArguments(typeToString(request.getType()), request.getId(), false);
             SauronObservation sauObs = silo.track(typeToString(request.getType()), request.getId());
-
             builder.setObservation(buildObs(sauObs));
 
             TrackResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(this.valueTS).build()).build();
@@ -225,6 +226,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         GossipResponse response = GossipResponse.newBuilder().build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
+
+        //debug-System.out.println("Received message from instance - " + request.getInstance());
 
         /*int instance = request.getInstance();
         List<Integer> newTS = request.getReplicaTS().getTsList();
@@ -383,30 +386,36 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return updateID;
     }
 
-    public void performGossip(String replicasPath){
-        String currentPath = replicasPath + "/" + this.instance;
+    public void performGossip(String serverPath){
         List<ZKRecord> replicas;
-        SauronGrpc.SauronBlockingStub stub;
-        ManagedChannel channel;
+        //debug-System.out.println("Gossip round!");
         try {
-            replicas = new ArrayList<>(this.nameServer.listRecords(replicasPath));
+            replicas = new ArrayList<>(this.nameServer.listRecords(serverPath));
         } catch(ZKNamingException e){
             System.out.println("Cannot perform gossip round - error getting replicas.");
             return;
         }
-        for (ZKRecord entry : replicas) {
-            if (!entry.getPath().equals(currentPath)) {
-                try {
-                    ZKRecord record = this.nameServer.lookup(entry.getPath());
-                    String target = record.getURI();
-                    channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-                    stub = SauronGrpc.newBlockingStub(channel);
-                    GossipRequest request = GossipRequest.newBuilder().build();
-                    //TODO-Send Log and replicaTS
-                    GossipResponse response = stub.gossip(request);
-                    channel.shutdown();
-                } catch (ZKNamingException | StatusRuntimeException e){}
+        if (replicas.size() == 1)
+            return;
+        try {
+            String currentPath = serverPath + "/" + this.instance;
+            String replicaPath = replicas.get((new Random()).nextInt(replicas.size())).getPath();
+            while (replicaPath.equals(currentPath)){
+                replicaPath = replicas.get((new Random()).nextInt(replicas.size())).getPath();
             }
+
+            ZKRecord record = this.nameServer.lookup(replicaPath);
+            String target = record.getURI();
+            ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+            SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
+            GossipRequest request = GossipRequest.newBuilder().setInstance(this.instance).build();
+
+            //TODO-Send Log and replicaTS taking into account tableTS
+            GossipResponse response = stub.gossip(request);
+            //debug-System.out.println("Sent message to instance - " + replicaPath);
+            channel.shutdown();
+        } catch (ZKNamingException | StatusRuntimeException e){
+            //Could not perform gossip round
         }
     }
 
