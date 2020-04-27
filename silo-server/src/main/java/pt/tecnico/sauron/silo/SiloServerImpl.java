@@ -41,7 +41,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
 
-    private List<Any> updateLog = new ArrayList<>();
+    private List<Record> updateLog = new ArrayList<>();
     private List<Integer> replicaTS;
     private List<Integer> valueTS;
     private List<List<Integer>> tableTS;
@@ -57,6 +57,45 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         tableTS.forEach(entry -> entry = new ArrayList<>(Collections.nCopies(replicaNum, 0)));
         this.nameServer = new ZKNaming(zooHost, zooPort);
         System.out.println("valueTS: " + this.valueTS);
+    }
+
+    private class Record{
+        private Any _request;
+        private List<Integer> _prevTS;
+        private List<Integer> _updateTS;
+        private int _handlerInstance;
+        private boolean _applied = false;
+
+        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst){
+            _request = request;
+            _prevTS = prevTS;
+            _updateTS = updateTS;
+            _handlerInstance = inst;
+        }
+
+        public Any getRequest() {
+            return _request;
+        }
+
+        public List<Integer> getPrevTS() {
+            return _prevTS;
+        }
+
+        public List<Integer> getUpdateTS() {
+            return _updateTS;
+        }
+
+        public int getHandlerInstance() {
+            return _handlerInstance;
+        }
+
+        public boolean isApplied() {
+            return _applied;
+        }
+
+        public void setApplied(boolean _applied) {
+            this._applied = _applied;
+        }
     }
 
     @Override
@@ -229,14 +268,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
         //debug-System.out.println("Received message from instance - " + request.getInstance());
 
-        /*int instance = request.getInstance();
+        int senderInstance = request.getInstance();
         List<Integer> newTS = request.getReplicaTS().getTsList();
-        List<Request> requests = request.getLogList();
+        List<Request> requests = request.getLogRecordList();
 
         handleNewRequests(requests);
-        updateTS(newTS);
-        tableTS.set(instance, newTS);
-        checkLog();*/
+        mergeTS(newTS);
+        tableTS.set(senderInstance-1, newTS);
+        checkLog();
     }
 
     private Observation buildObs(SauronObservation sauObs) {
@@ -391,7 +430,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
-        this.updateLog.add(request);
+        this.updateLog.add(new Record(request, updateID, prevTS, instance));
 
         return updateID;
     }
@@ -406,24 +445,24 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             System.out.println("Cannot perform gossip round - error getting replicas.");
             return;
         }
-        if (replicas.size() == 1)
-            // only replica available is the one calling the method
+        if (replicas.size() == 1 || updateLog.size() == 0)
+            // only replica available is the one calling the method or no updates to share
             return;
         try {
             String currentPath = serverPath + "/" + this.instance;
-            String replicaPath = replicas.get((new Random()).nextInt(replicas.size())).getPath();
-            while (replicaPath.equals(currentPath)){
-                replicaPath = replicas.get((new Random()).nextInt(replicas.size())).getPath();
-            }
+            int newInstance;
+            String replicaPath;
+            do {
+                newInstance = (new Random()).nextInt(replicas.size());
+                replicaPath = replicas.get(newInstance).getPath();
+            } while (replicaPath.equals(currentPath));
 
             ZKRecord record = this.nameServer.lookup(replicaPath);
             String target = record.getURI();
             ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
             SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
-            GossipRequest request = GossipRequest.newBuilder().setInstance(this.instance).build();
 
-            //TODO-Send Log and replicaTS taking into account tableTS
-            GossipResponse response = stub.gossip(request);
+            GossipResponse response = stub.gossip(getGossipRequest(newInstance));
             //debug-System.out.println("Sent message to instance - " + replicaPath);
             channel.shutdown();
         } catch (ZKNamingException | StatusRuntimeException e){
@@ -431,37 +470,79 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private void checkLog(){
-        updateLog.forEach(request -> {
-            try {
-                List<Integer> reqTS;
-                CamJoinRequest cam = request.is(CamJoinRequest.class) ? request.unpack(CamJoinRequest.class) : null;
-                ReportRequest report = request.is(ReportRequest.class) ? request.unpack(ReportRequest.class) : null;
-                if (cam != null)
-                    reqTS = cam.getVector().getTsList();
-                else
-                    reqTS = report.getVector().getTsList();
+    private GossipRequest getGossipRequest(int newInstance){
+        GossipRequest.Builder gossipReq = GossipRequest.newBuilder().setInstance(this.instance);
+        List<Request> sendRecords = new ArrayList<>();
+        int i = updateLog.size() - 1;
+        List<Integer> currentTS = updateLog.get(i).getUpdateTS();
+        while(i != -1 && tsAfter(tableTS.get(newInstance-1), currentTS) != -1) {
+            currentTS = updateLog.get(i).getUpdateTS();
+            Record record = updateLog.get(i);
+            VectorTS updateTS = VectorTS.newBuilder().addAllTs(currentTS).build();
+            VectorTS prevTS = VectorTS.newBuilder().addAllTs(record.getPrevTS()).build();
+            Request req = Request.newBuilder().setRequest(record.getRequest()).setInstance(record.getHandlerInstance()).setUpdateTS(updateTS).setPrevTS(prevTS).build();
+            sendRecords.add(0, req); //add to the beginning
+            i--;
+        }
+        gossipReq.setReplicaTS(VectorTS.newBuilder().addAllTs(replicaTS).build()).addAllLogRecord(sendRecords);
+        return gossipReq.build();
+    }
 
-                if (tsAfter(valueTS, reqTS) == 1){
-                    //TODO-perform update and remove the request from the log
-                }
-            } catch(InvalidProtocolBufferException e){
-                //TODO-Maybe remove the request
+    private void checkLog(){
+        if (updateLog.isEmpty())
+            return;
+        for (int i=0; i<updateLog.size(); i++) {
+            Record record = updateLog.get(i);
+            if (tsAfter(valueTS, record.getPrevTS()) != -1)
+                break;
+            if (record.isApplied()){
+                checkRecordRemoval(record, i);
             }
-        });
+            record.setApplied(true);
+            Any request = record.getRequest();
+            try {
+                if (request.is(CamJoinRequest.class))
+                    handleCamJoin(request.unpack(CamJoinRequest.class));
+                else
+                    handleReport(request.unpack(ReportRequest.class));
+            } catch (InvalidProtocolBufferException e) {
+
+            }
+        }
+
+    }
+
+    private void checkRecordRemoval(Record record, int index){
+        List<Integer> updateTS = record.getUpdateTS();
+        int recordInst = record.getHandlerInstance();
+
+        for (List<Integer> replicaTS : tableTS) {
+            if (replicaTS.get(recordInst -1) < updateTS.get(recordInst-1))
+                return;
+        }
+        updateLog.remove(index);
+    }
+
+    private void handleCamJoin(CamJoinRequest request){
+        //TODO-commit cam join
+    }
+
+    private void handleReport(ReportRequest request){
+        //TODO-commit report
     }
 
     private void handleNewRequests(List<Request> requests){
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
             if (tsAfter(reqTS, valueTS) == 1){
-                updateLog.add(request.getCamjoin() != null ? Any.pack(request.getCamjoin()) : Any.pack(request.getReport()));
+                //updateLog.add(request.getRequest()); FIXME- need to create record and add it to the log
             }
-            //TODO-missing check to see if the request is already in the list
+            //TODO-missing check to see if the request is already in the list, also no need to check if it can be committed now, will be done at the end of the gossip
         });
+        updateLog.sort((record1, record2) -> tsAfter(record1.getPrevTS(), record2.getPrevTS()));
     }
 
-    private void updateTS(List<Integer> newTS){
+    private void mergeTS(List<Integer> newTS){
         for (int i = 0; i < this.replicaTS.size(); i++){
             int prevValue = this.replicaTS.get(i);
             int newValue = newTS.get(i);
