@@ -73,10 +73,12 @@ public class SiloFrontend {
 
             CamJoinResponse response = _stub.camJoin(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            getConsistentResponse(response, valueTS, "camJoin"+name+lat+lon, CamJoinResponse.class);
+            //getConsistentResponse(response, valueTS, "camJoin"+name+lat+lon, CamJoinResponse.class);
+            this.prevTS = mergeTS(this.prevTS, valueTS);
         }
         catch (StatusRuntimeException e) {
-            getConsistentError(e, "camJoin"+name+lat+lon, CamJoinResponse.class);
+            //getConsistentError(e, "camJoin"+name+lat+lon, CamJoinResponse.class);
+            throw properException(e);
         }
     }
 
@@ -134,10 +136,12 @@ public class SiloFrontend {
 
             ReportResponse response = _stub.report(request);
             List<Integer> valueTS = response.getVector().getTsList();
-            getConsistentResponse(response, valueTS, query, ReportResponse.class);
+            this.prevTS = mergeTS(this.prevTS, valueTS);
+            //getConsistentResponse(response, valueTS, query, ReportResponse.class);
         }
         catch (StatusRuntimeException e) {
-            getConsistentError(e, query, ReportResponse.class);
+            throw properException(e);
+            //getConsistentError(e, query, ReportResponse.class);
         }
         if (error)
             throw new SauronException(errorMessage);
@@ -325,6 +329,15 @@ public class SiloFrontend {
         } catch (InvalidProtocolBufferException e) {
             throw new SauronException(ErrorMessage.UNKNOWN);
         }
+    }
+
+    private List<Integer> mergeTS(List<Integer> ts1, List<Integer> ts2) {
+        List<Integer> merged = new ArrayList<>(ts1.size());
+
+        for (int i = 0; i < ts1.size(); i++) {
+            merged.set(i, Math.max(ts1.get(i), ts2.get(i)));
+        }
+        return merged;
     }
 
 
