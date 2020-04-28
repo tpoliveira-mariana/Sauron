@@ -53,6 +53,8 @@ public class SiloFrontend {
         if (instance == -1) {
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
             System.out.println(path);
+            //if there are no replicas available(throw exception)- if (replicas.size() == 0)
+            //    return;
             path = replicas.get((new Random()).nextInt(replicas.size())).getPath();
         }
         ZKRecord record = nameServer.lookup(path);
@@ -332,8 +334,7 @@ public class SiloFrontend {
     }
 
     private List<Integer> mergeTS(List<Integer> ts1, List<Integer> ts2) {
-        List<Integer> merged = new ArrayList<>(ts1.size());
-
+        List<Integer> merged = new ArrayList<>(Collections.nCopies(ts1.size(), 0));
         for (int i = 0; i < ts1.size(); i++) {
             merged.set(i, Math.max(ts1.get(i), ts2.get(i)));
         }
