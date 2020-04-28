@@ -100,6 +100,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(6000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("left sleep");
         List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
 
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();

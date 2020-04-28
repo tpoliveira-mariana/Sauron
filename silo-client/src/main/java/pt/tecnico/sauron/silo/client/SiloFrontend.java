@@ -18,11 +18,13 @@ import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class SiloFrontend {
 
     private SauronGrpc.SauronBlockingStub _stub;
+    private ManagedChannel _channel;
 
     // fully detect valid cam name
     private static final Pattern CAM_PATT = Pattern.compile("[A-Za-z0-9]{3,15}+");
@@ -50,178 +52,162 @@ public class SiloFrontend {
 
     public void connect(int instance) throws ZKNamingException{
         String path = SERVER_PATH + "/" + instance;
+        System.out.println(path);
         if (instance == -1) {
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
-            System.out.println(path);
             path = replicas.get((new Random()).nextInt(replicas.size())).getPath();
         }
         ZKRecord record = nameServer.lookup(path);
         String target = record.getURI();
-        final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        _stub = SauronGrpc.newBlockingStub(channel);
+        _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+        _stub = SauronGrpc.newBlockingStub(_channel).withDeadlineAfter(5000, TimeUnit.MILLISECONDS);
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
+        boolean failed;
         checkCamera(name, lat, lon);
+        Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
+        CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
+                                                            .setCoordinates(coordinates)
+                                                            .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+                                                            .build();
+        do {
+            failed = false;
+            try {
+                CamJoinResponse response = _stub.camJoin(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                this.prevTS = mergeTS(this.prevTS, valueTS);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else throw properException(e);
+            }
+        } while (failed);
 
-        try {
-            Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
-            CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
-                                                                .setCoordinates(coordinates)
-                                                                .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
-                                                                .build();
-
-            CamJoinResponse response = _stub.camJoin(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            //getConsistentResponse(response, valueTS, "camJoin"+name+lat+lon, CamJoinResponse.class);
-            this.prevTS = mergeTS(this.prevTS, valueTS);
-        }
-        catch (StatusRuntimeException e) {
-            //getConsistentError(e, "camJoin"+name+lat+lon, CamJoinResponse.class);
-            throw properException(e);
-        }
     }
 
     public double[] camInfo(String name) throws SauronException {
+        boolean failed;
         checkCameraName(name);
+        CamInfoResponse response = null;
+        CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
 
-        try {
-            CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
+        do {
+            failed = false;
+            try {
+                response = _stub.camInfo(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
+            }
+        } while (failed);
 
-            CamInfoResponse response = _stub.camInfo(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
-            /*if (this.tsAfter(valueTS, this.prevTS)) {
-                this.prevTS = valueTS;
-                responses.put("camInfo"+name, Any.pack(response));
-            } else {
-                response = responses.get("camInfo"+name).unpack(CamInfoResponse.class);
-            }*/
-
-            return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
-        }
-        catch (StatusRuntimeException e) {
-            CamInfoResponse response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
-            return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
-        }/* catch (InvalidProtocolBufferException e) {
-            throw new SauronException(ErrorMessage.UNKNOWN);
-        }*/
+        return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
     }
 
-    public void report(String name, List<List<String>> observations) throws SauronException{
+    public void report(String name, List<List<String>> observations) throws SauronException {
         checkCameraName(name);
+        boolean failed;
         boolean error = false;
         ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
-        String query = "";
-        for (List<String> observation : observations)
-            query += observation.get(0) + observation.get(1);
 
-        try {
-            ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
-            for (List<String> observation : observations) {
-                try {
-                    checkObjectArguments(observation.get(0), observation.get(1), false);
-                    ObjectType type = stringToType(observation.get(0));
-                    Object builderObj = Object.newBuilder().setType(type)
-                                                           .setId(observation.get(1)).build();
-                    builder.addObject(builderObj);
-                } catch (SauronException e){
-                    if (!error)
-                        errorMessage = e.getErrorMessage();
-                    error = true;
-                }
+        ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
+        for (List<String> observation : observations) {
+            try {
+                checkObjectArguments(observation.get(0), observation.get(1), false);
+                builder.addObject(Object.newBuilder()
+                        .setType(stringToType(observation.get(0)))
+                        .setId(observation.get(1)).build());
+            } catch (SauronException e) {
+                if (!error) errorMessage = e.getErrorMessage();
+                error = true;
             }
-
-            ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build()).build();
-
-            ReportResponse response = _stub.report(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            this.prevTS = mergeTS(this.prevTS, valueTS);
-            //getConsistentResponse(response, valueTS, query, ReportResponse.class);
         }
-        catch (StatusRuntimeException e) {
-            throw properException(e);
-            //getConsistentError(e, query, ReportResponse.class);
-        }
-        if (error)
-            throw new SauronException(errorMessage);
+        ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build()).build();
+
+        do {
+            failed = false;
+            try {
+                ReportResponse response = _stub.report(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                this.prevTS = mergeTS(this.prevTS, valueTS);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else throw properException(e);
+            }
+        } while (failed);
+
+        if (error) throw new SauronException(errorMessage);
     }
 
     public TrackResponse track(String type, String id) throws SauronException {
-        try {
-            checkObjectArguments(type, id, false);
-            TrackRequest request = TrackRequest.newBuilder()
-                    .setType(stringToType(type))
-                    .setId(id)
-                    .build();
+        boolean failed;
+        TrackResponse response = null;
+        checkObjectArguments(type, id, false);
+        TrackRequest request = TrackRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+        do {
+            failed = false;
+            try {
+                response = _stub.track(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                response = getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else response = getConsistentError(e, "track"+type+id, TrackResponse.class);
+            }
+        } while (failed);
 
-            TrackResponse response = _stub.track(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            return getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
-            /*if (this.tsAfter(valueTS, this.prevTS)) {
-                this.prevTS = valueTS;
-                responses.put("track"+type+id, Any.pack(response));
-                return response;
-            } else {
-                return responses.get("track"+type+id).unpack(TrackResponse.class);
-            }*/
-        } catch (StatusRuntimeException e) {
-            return getConsistentError(e, "track"+type+id, TrackResponse.class);
-        }/* catch (InvalidProtocolBufferException e) {
-            throw new SauronException(ErrorMessage.UNKNOWN);
-        }*/
-
+        return response;
     }
 
     public TrackMatchResponse trackMatch(String type, String id) throws SauronException {
-        try {
-            checkObjectArguments(type, id, true);
-            TrackMatchRequest request = TrackMatchRequest.newBuilder()
-                    .setType(stringToType(type))
-                    .setId(id)
-                    .build();
+        boolean failed;
+        TrackMatchResponse response = null;
+        checkObjectArguments(type, id, true);
+        TrackMatchRequest request = TrackMatchRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+        do {
+            failed = false;
+            try {
+                response = _stub.trackMatch(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                response = getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else response = getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
+            }
+        } while (failed);
 
-            TrackMatchResponse response = _stub.trackMatch(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            return getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
-            /*if (this.tsAfter(valueTS, this.prevTS)) {
-                this.prevTS = valueTS;
-                responses.put("trackMatch"+type+id, Any.pack(response));
-                return response;
-            } else {
-                return responses.get("trackMatch"+type+id).unpack(TrackMatchResponse.class);
-            }*/
-        } catch (StatusRuntimeException e) {
-            return getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
-        }/* catch (InvalidProtocolBufferException e) {
-            throw new SauronException(ErrorMessage.UNKNOWN);
-        }*/
+        return response;
     }
 
     public TraceResponse trace(String type, String id) throws SauronException {
-        try {
-            checkObjectArguments(type, id, false);
-            TraceRequest request = TraceRequest.newBuilder()
-                    .setType(stringToType(type))
-                    .setId(id)
-                    .build();
+        boolean failed;
+        TraceResponse response = null;
+        checkObjectArguments(type, id, false);
+        TraceRequest request = TraceRequest.newBuilder()
+                .setType(stringToType(type))
+                .setId(id)
+                .build();
+        do {
+            failed = false;
+            try {
+                response = _stub.trace(request);
+                List<Integer> valueTS = response.getVector().getTsList();
+                response = getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else response = getConsistentError(e, "trace"+type+id, TraceResponse.class);
+            }
+        } while (failed);
 
-            TraceResponse response = _stub.trace(request);
-            List<Integer> valueTS = response.getVector().getTsList();
-            return getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
-            /*if (this.tsAfter(valueTS, this.prevTS)) {
-                this.prevTS = valueTS;
-                responses.put("trace"+type+id, Any.pack(response));
-                return response;
-            } else {
-                return responses.get("trace"+type+id).unpack(TraceResponse.class);
-            }*/
-
-        } catch (StatusRuntimeException e) {
-            return getConsistentError(e, "trace"+type+id, TraceResponse.class);
-        }/* catch (InvalidProtocolBufferException e) {
-            throw new SauronException(ErrorMessage.UNKNOWN);
-        }*/
+        return response;
     }
 
     public String ctrlPing(String input) throws SauronException {
@@ -291,6 +277,22 @@ public class SiloFrontend {
             return new SauronException(ErrorMessage.REFUSED);
         }
         return reactToStatus(e.getStatus().getDescription());
+    }
+
+    private boolean reconnectOnFail(StatusRuntimeException exception) throws SauronException {
+        Status.Code code = exception.getStatus().getCode();
+        try {
+            if (code == Status.Code.UNAVAILABLE || code == Status.Code.DEADLINE_EXCEEDED) {
+                if (replicaNum > 1) {
+                    _channel.shutdown();
+                    connect(-1);
+                }
+                return true;
+            }
+            return false;
+        } catch (ZKNamingException e) {
+            throw new SauronException(ErrorMessage.REFUSED);
+        }
     }
 
 
