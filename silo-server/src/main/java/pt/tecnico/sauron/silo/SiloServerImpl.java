@@ -103,17 +103,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
 
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
-        try {
-            SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
-            silo.addCamera(newCam);
 
-            CamJoinResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-        }
-        catch(SauronException e) {
-            reactToException(e, responseObserver);
-        }
+        CamJoinResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -136,41 +129,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     public synchronized void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
         List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
 
-        ReportResponse.Builder builder = ReportResponse.newBuilder();
-        SauronCamera cam;
-        try {
-            cam = silo.getCamByName(request.getName());
-        } catch(SauronException e) {
-            cam = null;
-        }
-        List<Object> objects = request.getObjectList();
-        if (cam == null) {
-            responseObserver.onError(NOT_FOUND
-                    .withDescription("CAMERA_NOT_FOUND").asRuntimeException());
-        }
-        else {
-            boolean error = false;
-            for(Object obj: objects) {
-                try {
-                    String type = typeToString(obj.getType());
-                    SauronObject sauObj = silo.getObject(type, obj.getId());
-                    if (sauObj == null)
-                        sauObj = silo.addObject(type, obj.getId());
+        ReportResponse response = ReportResponse.newBuilder().setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
 
-                    SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
-                    silo.addObservation(observation);
-                } catch (SauronException e) {
-                    if (!error)
-                        reactToException(e, responseObserver);
-                    error = true;
-                }
-            }
-            if (!error) {
-                ReportResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
-            }
-        }
     }
 
     @Override
@@ -532,11 +494,41 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private void handleCamJoin(CamJoinRequest request){
-        //TODO-commit cam join
+        try {
+            SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
+            silo.addCamera(newCam);
+        }
+        catch(SauronException e) {
+            return;
+        }
     }
 
     private void handleReport(ReportRequest request){
-        //TODO-commit report
+        SauronCamera cam;
+        try {
+            cam = silo.getCamByName(request.getName());
+        } catch(SauronException e) {
+            cam = null;
+        }
+        List<Object> objects = request.getObjectList();
+        if (cam == null) {
+           return;
+        }
+        else {
+            for (Object obj : objects) {
+                try {
+                    String type = typeToString(obj.getType());
+                    SauronObject sauObj = silo.getObject(type, obj.getId());
+                    if (sauObj == null)
+                        sauObj = silo.addObject(type, obj.getId());
+
+                    SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
+                    silo.addObservation(observation);
+                } catch (SauronException e) {
+                    continue;
+                }
+            }
+        }
     }
 
     private void handleNewRequests(List<Request> requests){
