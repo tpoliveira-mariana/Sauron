@@ -406,8 +406,20 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
-        this.updateLog.add(new Record(request, updateID, prevTS, instance));
-
+        Record record = new Record(request, updateID, prevTS, this.instance);
+        this.updateLog.add(record);
+        if (tsAfter(valueTS, prevTS)) {
+            //Should we send exceptions in this case?
+            try {
+                if (request.is(CamJoinRequest.class))
+                    handleCamJoin(request.unpack(CamJoinRequest.class));
+                else
+                    handleReport(request.unpack(ReportRequest.class));
+                record.setApplied(true);
+            } catch (InvalidProtocolBufferException e) {
+                //Couldn't unpack try later
+            }
+        }
         return updateID;
     }
 
