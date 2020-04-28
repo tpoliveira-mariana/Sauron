@@ -542,10 +542,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private void handleNewRequests(List<Request> requests){
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
-            if (tsAfter(valueTS, reqTS)){
-                //updateLog.add(request.getRequest()); FIXME- need to create record and add it to the log
+            int reqInst = request.getInstance();
+            if (!tsAfter(replicaTS, reqTS)){
+                //check if replicaTS is outdated in relation to updateTS
+                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, reqInst));
             }
-            //TODO-missing check to see if the request is already in the list, also no need to check if it can be committed now, will be done at the end of the gossip
         });
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
     }
