@@ -114,7 +114,8 @@ message Request{
     google.protobuf.Any request = 1;
     VectorTS prevTS = 2;
     VectorTS updateTS = 3;
-    int32 instance = 4;
+    google.protobuf.Timestamp timestamp = 4;
+    int32 instance = 5;
 }
 
 message GossipRequest {

@@ -22,6 +22,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import java.text.ParseException;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -59,17 +60,29 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private class Record{
+        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+
         private Any _request;
         private List<Integer> _prevTS;
         private List<Integer> _updateTS;
         private int _handlerInstance;
         private boolean _applied = false;
+        String _timestamp;
 
-        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst){
+        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, ZonedDateTime ts){
             _request = request;
             _prevTS = prevTS;
             _updateTS = updateTS;
             _handlerInstance = inst;
+            _timestamp = ts.format(formatter);
+        }
+
+        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, String ts){
+            _request = request;
+            _prevTS = prevTS;
+            _updateTS = updateTS;
+            _handlerInstance = inst;
+            _timestamp = ts;
         }
 
         public Any getRequest() {
@@ -92,6 +105,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             return _applied;
         }
 
+        public String getTimestamp() {
+            return _timestamp;
+        }
+
         public void setApplied(boolean _applied) {
             this._applied = _applied;
         }
@@ -111,7 +128,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
         List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
-        System.out.println(updateID);
+        //debug-System.out.println(updateID);
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
 
         CamJoinResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
@@ -408,14 +425,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
-        Record record = new Record(request, prevTS, updateID, this.instance);
+        Record record = new Record(request, prevTS, updateID, this.instance, ZonedDateTime.now());
         this.updateLog.add(record);
         if (tsAfter(valueTS, prevTS)) {
             try {
                 if (request.is(CamJoinRequest.class))
                     handleCamJoin(request.unpack(CamJoinRequest.class));
                 else
-                    handleReport(request.unpack(ReportRequest.class));
+                    handleReport(request.unpack(ReportRequest.class), record.getTimestamp());
                 record.setApplied(true);
                 this.valueTS = mergeTS(this.valueTS, updateID);
             } catch (InvalidProtocolBufferException e) {
@@ -446,7 +463,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 newInstance = (new Random()).nextInt(replicas.size());
                 replicaPath = replicas.get(newInstance).getPath();
             } while (replicaPath.equals(currentPath));
-            System.out.println("" + replicaPath);
+            System.out.println("connecting to - " + replicaPath);
             ZKRecord record = this.nameServer.lookup(replicaPath);
             String target = record.getURI();
             ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
@@ -473,7 +490,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             if (currentTS.get(requestInst-1) > tableTS.get(newInstance-1).get(requestInst-1)) {
                 VectorTS updateTS = VectorTS.newBuilder().addAllTs(currentTS).build();
                 VectorTS prevTS = VectorTS.newBuilder().addAllTs(record.getPrevTS()).build();
-                Request req = Request.newBuilder().setRequest(record.getRequest()).setInstance(requestInst).setUpdateTS(updateTS).setPrevTS(prevTS).build();
+                Timestamp ts;
+                try {
+                    ts = Timestamps.parse(record.getTimestamp());
+                } catch (ParseException e) {
+                    ts = Timestamp.getDefaultInstance();
+                }
+                Request req = Request.newBuilder().setRequest(record.getRequest()).setInstance(requestInst).setUpdateTS(updateTS).setPrevTS(prevTS).setTimestamp(ts).build();
                 sendRecords.add(0, req); //add to the beginning
             }
         }
@@ -499,7 +522,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 if (request.is(CamJoinRequest.class))
                     handleCamJoin(request.unpack(CamJoinRequest.class));
                 else
-                    handleReport(request.unpack(ReportRequest.class));
+                    handleReport(request.unpack(ReportRequest.class), record.getTimestamp());
                 record.setApplied(true);
                 this.valueTS = mergeTS(valueTS, record.getUpdateTS());
                 i = checkRecordRemoval(record, i) ? i-1 : i;
@@ -534,7 +557,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private void handleReport(ReportRequest request){
+    private void handleReport(ReportRequest request, String ts){
         SauronCamera cam;
         try {
             cam = silo.getCamByName(request.getName());
@@ -553,7 +576,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                     if (sauObj == null)
                         sauObj = silo.addObject(type, obj.getId());
 
-                    SauronObservation observation = new SauronObservation(sauObj, cam, ZonedDateTime.now());
+                    SauronObservation observation = new SauronObservation(sauObj, cam, ts);
                     silo.addObservation(observation);
                 } catch (SauronException e) {
                     continue;
@@ -571,9 +594,9 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             //debug-System.out.println("updateTS - " + reqTS);
             //debug-System.out.println("replicaTS - " + this.replicaTS);
             if (reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
-                //debug-System.out.println("Added to log");
+                //debug-System.out.println("Added to log - " + Timestamps.toString(request.getTimestamp()));
                 //check if replicaTS is outdated in relation to updateTS
-                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst));
+                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp())));
             }
         });
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
@@ -585,7 +608,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         for (int i = 0; i < ts1.size(); i++) {
             merged.set(i, Math.max(ts1.get(i), ts2.get(i)));
         }
-        System.out.println(merged.get(0));
+        //debug-System.out.println(merged.get(0));
         return merged;
     }
 

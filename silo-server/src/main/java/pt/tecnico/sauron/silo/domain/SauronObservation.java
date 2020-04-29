@@ -5,17 +5,15 @@ import java.time.format.DateTimeFormatter;
 
 public class SauronObservation {
 
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-
     private SauronObject _obj;
     private SauronCamera _cam;
     private String _ts;
 
 
-    public SauronObservation(SauronObject obj, SauronCamera cam, ZonedDateTime ts) {
+    public SauronObservation(SauronObject obj, SauronCamera cam, String ts) {
         setObject(obj);
         setCamera(cam);
-        setTimeStamp(ts.format(formatter));
+        setTimeStamp(ts);
     }
 
     public SauronObject getObject() {
