@@ -34,8 +34,8 @@ public class TraceIT extends BaseIT {
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
-        frontend = new SiloFrontend("localhost", "2181", -1);
         try {
+            frontend = new SiloFrontend("localhost", "2181", -1);
             frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }

@@ -21,8 +21,8 @@ import java.util.List;
 import static junit.framework.TestCase.fail;
 
 public class TrackIT extends BaseIT{
-    private static final String HOST = "localhost";
-    private static final String PORT = "2181";
+    private static final String ZOOHOST = "localhost";
+    private static final String ZOOPORT = "2181";
     private static final String PATH = "/grpc/sauron/silo/1";
     private static final String TEST_DATA_FILE = "./src/test/trackIT_data.txt";
     private static SiloFrontend frontend;
@@ -42,8 +42,8 @@ public class TrackIT extends BaseIT{
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
-        frontend = new SiloFrontend(HOST, PORT, -1);
         try {
+            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, -1);
             frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }

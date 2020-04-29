@@ -24,8 +24,8 @@ public class CamInfoIT extends BaseIT{
     // one-time initialization and clean-up
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
-        frontend = new SiloFrontend(HOST, PORT, -1);
         try {
+            frontend = new SiloFrontend(HOST, PORT, -1);
             frontend.ctrlClear();
         } catch (SauronException e) {
             System.out.println(e.getErrorMessageLabel());

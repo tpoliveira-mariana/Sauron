@@ -91,7 +91,7 @@ public class Silo {
         SauronObservation max = obs.get(0);
 
         for (int i = 1; i < obs.size(); i++) {
-            if (max.compareTo(obs.get(i)) > 0) {
+            if (max.compareTo(obs.get(i)) < 0) {
                 max = obs.get(i);
             }
         }

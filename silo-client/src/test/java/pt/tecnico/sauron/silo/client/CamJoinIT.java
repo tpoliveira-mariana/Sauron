@@ -6,8 +6,8 @@ import pt.tecnico.sauron.exceptions.SauronException;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class CamJoinIT extends BaseIT{
-    private static final String HOST = "localhost";
-    private static final String PORT = "2181";
+    private static final String ZOOHOST = "localhost";
+    private static final String ZOOPORT = "2181";
     private static final String PATH = "/grpc/sauron/silo/1";
     private static SiloFrontend frontend;
 
@@ -29,7 +29,11 @@ public class CamJoinIT extends BaseIT{
 
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
-        frontend = new SiloFrontend(HOST, PORT, -1);
+        try {
+            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, -1);
+        } catch(SauronException e){
+            System.out.println(e.getErrorMessageLabel());
+        }
     }
 
     @BeforeEach
@@ -67,8 +71,8 @@ public class CamJoinIT extends BaseIT{
         }
     }
 
-    // tests
 
+    // tests
     @Test
     public void camJoinOK_OneCam() {
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
@@ -89,6 +93,24 @@ public class CamJoinIT extends BaseIT{
         assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_TAGUS, LAT_ALAMEDA, LON_ALAMEDA));
         assertCamSaved(NAME_TAGUS, LAT_ALAMEDA, LON_ALAMEDA, true);
+    }
+
+    @Test
+    public void camJoinOK_duplicateCam() {
+        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
+
+        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
+    }
+
+    @Test
+    public void camJoinOK_duplicateCamName() {
+        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
+        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
+
+        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS));
+        assertCamSaved(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS, false);
     }
 
     @Test
@@ -141,25 +163,5 @@ public class CamJoinIT extends BaseIT{
         e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_INF));
         Assertions.assertEquals(ErrorMessage.INVALID_COORDINATES, e.getErrorMessage());
         assertCamSaved(NAME_ALAMEDA, INVALID_LAT_SUP, INVALID_LON_INF, false);
-    }
-
-    @Test
-    public void camJoinNOK_duplicateCam() {
-        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
-        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
-
-        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
-        Assertions.assertEquals(ErrorMessage.DUPLICATE_CAMERA, e.getErrorMessage());
-        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
-    }
-
-    @Test
-    public void camJoinNOK_duplicateCamName() {
-        Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
-        assertCamSaved(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA, true);
-
-        SauronException e = Assertions.assertThrows(SauronException.class, () -> frontend.camJoin(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS));
-        Assertions.assertEquals(ErrorMessage.DUPLICATE_CAM_NAME, e.getErrorMessage());
-        assertCamSaved(NAME_ALAMEDA, LAT_TAGUS, LON_TAGUS, false);
     }
 }

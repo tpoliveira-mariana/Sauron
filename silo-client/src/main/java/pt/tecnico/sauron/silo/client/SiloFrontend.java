@@ -223,25 +223,35 @@ public class SiloFrontend {
     }
 
     public String ctrlPing(String input) throws SauronException {
-        try {
-            PingRequest request = PingRequest.newBuilder().setInput(input).build();
-
-            PingResponse response = _stub.ctrlPing(request);
-            return response.getOutput();
-        }
-        catch (StatusRuntimeException e) {
-            throw properException(e);
-        }
+        PingResponse response = null;
+        PingRequest request = PingRequest.newBuilder().setInput(input).build();
+        boolean failed;
+        do {
+            failed = false;
+            try {
+                response = _stub.ctrlPing(request);
+            }
+            catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else throw properException(e);
+            }
+        } while (failed);
+        return response.getOutput();
     }
 
     public void ctrlClear() throws SauronException {
-        try {
-            ClearRequest request = ClearRequest.getDefaultInstance();
-            _stub.ctrlClear(request);
-        }
-        catch (StatusRuntimeException e) {
-            throw properException(e);
-        }
+        ClearRequest request = ClearRequest.getDefaultInstance();
+        boolean failed;
+        do {
+            failed = false;
+            try {
+                _stub.ctrlClear(request);
+            }
+            catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e)) failed = true;
+                else throw properException(e);
+            }
+        } while (failed);
     }
 
     public void ctrlInit(String fileName) throws SauronException {

@@ -460,7 +460,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             do {
                 newInstance = (new Random()).nextInt(replicas.size());
                 replicaPath = replicas.get(newInstance).getPath();
-            } while (replicaPath.equals(currentPath));
+            } while (replicaPath.equals(currentPath) || newInstance >= replicaTS.size());
             System.out.println("connecting to - " + replicaPath);
             ZKRecord record = this.nameServer.lookup(replicaPath);
             String target = record.getURI();
@@ -504,11 +504,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private void checkLog(){
         if (updateLog.isEmpty())
             return;
-        for (int i = updateLog.size()-1; i >= 0; i--) {
+        for (int i=0; i < updateLog.size(); i++) {
             Record record = updateLog.get(i);
             //debug-System.out.println("valueTS: " + valueTS + " prevTS: " + record.getPrevTS());
             if (record.isApplied()) {
-                checkRecordRemoval(record, i);
+                i = checkRecordRemoval(record, i) ? i-1 : i;
             } else if (tsCompare(valueTS, record.getPrevTS()) == -1) {
                 break;
             } else {
@@ -520,21 +520,22 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                         handleReport(request.unpack(ReportRequest.class), record.getTimestamp());
                     record.setApplied(true);
                     this.valueTS = mergeTS(valueTS, record.getUpdateTS());
-                    checkRecordRemoval(record, i);
+                    i = checkRecordRemoval(record, i) ? i - 1 : i;
                 } catch (InvalidProtocolBufferException ignored) {}
             }
         }
     }
 
-    private void checkRecordRemoval(Record record, int index){
+    private boolean checkRecordRemoval(Record record, int index){
         List<Integer> updateTS = record.getUpdateTS();
         int recordInst = record.getHandlerInstance();
 
         for (int i = 0; i < tableTS.size(); i++) {
             if (i != instance-1 && tableTS.get(i).get(recordInst - 1) < updateTS.get(recordInst-1))
-                return;
+                return false;
         }
         updateLog.remove(index);
+        return true;
     }
 
     private void handleCamJoin(CamJoinRequest request){
