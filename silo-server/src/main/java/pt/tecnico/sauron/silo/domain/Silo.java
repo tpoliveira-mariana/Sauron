@@ -45,10 +45,6 @@ public class Silo {
 
     }
 
-    public void addObject(SauronObject obj) {
-        _objs.put(obj.getType() + ":" + obj.getId(), obj);
-    }
-
     public SauronObject addObject(String type, String id) throws SauronException {
         SauronObject sauObj = createNewObject(type, id);
         String key = type + ":" + id;
@@ -91,6 +87,17 @@ public class Silo {
         }
     }
 
+    SauronObservation findMostRecent(List<SauronObservation> obs) {
+        SauronObservation max = obs.get(0);
+
+        for (int i = 1; i < obs.size(); i++) {
+            if (max.compareTo(obs.get(i)) > 0) {
+                max = obs.get(i);
+            }
+        }
+         return max;
+    }
+
     public SauronObservation track(String type, String id) throws SauronException {
         SauronObject object = getObject(type, id);
         if (object == null)
@@ -100,7 +107,7 @@ public class Silo {
         if (sauObs.isEmpty())
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 
-        return sauObs.get(sauObs.size()-1);
+        return findMostRecent(sauObs);
     }
 
     public List<SauronObservation> trackMatch(String type, String partId) throws SauronException {
@@ -108,7 +115,7 @@ public class Silo {
         return _obs.keySet()
                 .stream()
                 .filter(obj -> pattern.matcher(obj.getId()).matches() && obj.getType().equals(type))
-                .map(obj -> _obs.get(obj).get(_obs.get(obj).size()-1))
+                .map(obj -> findMostRecent(_obs.get(obj)))
                 .collect(Collectors.toList());
     }
 
@@ -122,6 +129,7 @@ public class Silo {
             throw new SauronException(ErrorMessage.OBJECT_NOT_FOUND);
 
         sauObs = new ArrayList<>(sauObs);
+        Collections.sort(sauObs);
         Collections.reverse(sauObs);
         return sauObs;
     }

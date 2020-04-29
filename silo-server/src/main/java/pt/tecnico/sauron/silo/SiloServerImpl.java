@@ -282,8 +282,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
         Object object = Object.newBuilder().setType(type).setId(sauObs.getObjectId()).build();
         Coordinates coords = Coordinates.newBuilder()
-                                .setLongitude(sauObs.getCamera().getLongitude())
-                                .setLatitude(sauObs.getCamera().getLatitude()).build();
+                .setLongitude(sauObs.getCamera().getLongitude())
+                .setLatitude(sauObs.getCamera().getLatitude()).build();
         Cam cam = Cam.newBuilder().setName(sauObs.getCamera().getName()).setCoordinates(coords).build();
 
         return Observation.newBuilder().setObject(object).setCam(cam).setTimestamp(ts).build();
@@ -566,7 +566,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
         List<Object> objects = request.getObjectList();
         if (cam == null) {
-           return;
+            return;
         }
         else {
             for (Object obj : objects) {

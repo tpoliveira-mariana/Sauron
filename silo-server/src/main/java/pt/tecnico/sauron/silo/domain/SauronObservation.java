@@ -1,9 +1,10 @@
 package pt.tecnico.sauron.silo.domain;
 
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class SauronObservation {
+public class SauronObservation implements Comparable<SauronObservation> {
 
     private SauronObject _obj;
     private SauronCamera _cam;
@@ -46,5 +47,13 @@ public class SauronObservation {
 
     private void setTimeStamp(String ts) {
         _ts = ts;
+    }
+
+    @Override
+    public int compareTo(SauronObservation obs) {
+        if (_ts == null || obs.getTimeStamp() == null) {
+            return 0;
+        }
+        return LocalDateTime.parse(_ts).compareTo(LocalDateTime.parse(obs.getTimeStamp()));
     }
 }
