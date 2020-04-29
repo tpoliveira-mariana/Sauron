@@ -41,12 +41,12 @@ public class EyeApp {
 			double lon = Double.parseDouble(args[4]);
 
 			processCameraObservations(cameraName, lat, lon);
-		}
-		catch (NumberFormatException e) {
+		} catch (NumberFormatException e) {
 			shutDownMessage("Invalid number provided.");
-		}
-		catch (ZKNamingException e) {
+		} catch (ZKNamingException e) {
 			shutDownMessage("Zookeeper error.");
+		} catch (SauronException e) {
+			shutDownMessage("No Silo replicas found.");
 		}
 	}
 

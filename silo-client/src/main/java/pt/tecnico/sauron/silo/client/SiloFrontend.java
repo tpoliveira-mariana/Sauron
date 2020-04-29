@@ -40,9 +40,11 @@ public class SiloFrontend {
     private List<Integer> prevTS;
     private final int replicaNum;
 
+    private static final int MIL_TIMEOUT = 5000;
+
     private Map<String, Any> responses = new HashMap<>();
 
-    public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException {
+    public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException, SauronException {
         nameServer = new ZKNaming(zooHost,zooPort);
         List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
         replicaNum = replicas.size();
@@ -50,19 +52,27 @@ public class SiloFrontend {
         connect(instance);
     }
 
-    public void connect(int instance) throws ZKNamingException{
+    public void connect(int instance) throws ZKNamingException, SauronException {
         String path = SERVER_PATH + "/" + instance;
-        System.out.println(path);
+        ZKRecord record;
         if (instance == -1) {
+            System.out.println("Choosing random replica...");
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
-            //if there are no replicas available(throw exception)- if (replicas.size() == 0)
-            //    return;
-            path = replicas.get((new Random()).nextInt(replicas.size())).getPath();
+            if (replicas.isEmpty())
+                throw new SauronException(ErrorMessage.REFUSED);
+            record = replicas.get((new Random()).nextInt(replicas.size()));
+        } else {
+            record = nameServer.lookup(path);
         }
-        ZKRecord record = nameServer.lookup(path);
         String target = record.getURI();
         _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        _stub = SauronGrpc.newBlockingStub(_channel).withDeadlineAfter(5000, TimeUnit.MILLISECONDS);
+        _stub = SauronGrpc.newBlockingStub(_channel);
+
+        System.out.println("Connected to: " + record.getPath());
+    }
+
+    private SauronGrpc.SauronBlockingStub timedStub() {
+        return _stub.withDeadlineAfter(MIL_TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
@@ -76,7 +86,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                CamJoinResponse response = _stub.camJoin(request);
+                CamJoinResponse response = timedStub().camJoin(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 this.prevTS = mergeTS(this.prevTS, valueTS);
             } catch (StatusRuntimeException e) {
@@ -96,7 +106,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                response = _stub.camInfo(request);
+                response = timedStub().camInfo(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
             } catch (StatusRuntimeException e) {
@@ -131,7 +141,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                ReportResponse response = _stub.report(request);
+                ReportResponse response = timedStub().report(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 this.prevTS = mergeTS(this.prevTS, valueTS);
             } catch (StatusRuntimeException e) {
@@ -154,7 +164,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                response = _stub.track(request);
+                response = timedStub().track(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 response = getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
             } catch (StatusRuntimeException e) {
@@ -177,7 +187,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                response = _stub.trackMatch(request);
+                response = timedStub().trackMatch(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 response = getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
             } catch (StatusRuntimeException e) {
@@ -200,7 +210,7 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
-                response = _stub.trace(request);
+                response = timedStub().trace(request);
                 List<Integer> valueTS = response.getVector().getTsList();
                 response = getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
             } catch (StatusRuntimeException e) {
@@ -285,6 +295,7 @@ public class SiloFrontend {
         Status.Code code = exception.getStatus().getCode();
         try {
             if (code == Status.Code.UNAVAILABLE || code == Status.Code.DEADLINE_EXCEEDED) {
+                System.out.println("Failed:"+code.toString());
                 if (replicaNum > 1) {
                     _channel.shutdown();
                     connect(-1);

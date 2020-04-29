@@ -39,6 +39,8 @@ public class SpotterApp {
 			System.out.println("Invalid number provided.");
 		} catch (ZKNamingException e){
 			System.out.println("Zookeper could not start.");
+		} catch (SauronException e) {
+			System.out.println("No Silo replicas found.");
 		}
 	}
 
