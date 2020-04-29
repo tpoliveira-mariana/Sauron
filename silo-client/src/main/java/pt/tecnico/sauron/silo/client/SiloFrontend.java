@@ -56,19 +56,27 @@ public class SiloFrontend {
         String path = SERVER_PATH + "/" + instance;
         ZKRecord record;
         if (instance == -1) {
-            System.out.println("Choosing random replica...");
+            display("Choosing random replica to connect to...");
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
-            if (replicas.isEmpty())
+            if (replicas.isEmpty()) {
+                display("There are no available replicas. Failing...");
                 throw new SauronException(ErrorMessage.REFUSED);
+            }
             record = replicas.get((new Random()).nextInt(replicas.size()));
         } else {
             record = nameServer.lookup(path);
         }
-        String target = record.getURI();
-        _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        _stub = SauronGrpc.newBlockingStub(_channel);
+        try {
+            String target = record.getURI();
+            _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+            _stub = SauronGrpc.newBlockingStub(_channel);
 
-        System.out.println("Connected to: " + record.getPath());
+            display("Connected to: " + record.getPath());
+        }
+        catch (IllegalArgumentException e) {
+            display("Couldn't build channel. Failing...");
+            throw new SauronException(ErrorMessage.UNKNOWN);
+        }
     }
 
     private SauronGrpc.SauronBlockingStub timedStub() {
@@ -86,11 +94,16 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending camJoin request...");
                 CamJoinResponse response = timedStub().camJoin(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 this.prevTS = mergeTS(this.prevTS, valueTS);
+                display("Updated prevTS to " + this.prevTS);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
+                if (reconnectOnFail(e)) {
+                    failed = true;
+                }
                 else throw properException(e);
             }
         } while (failed);
@@ -106,12 +119,18 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending camInfo request...");
                 response = timedStub().camInfo(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
+                if (reconnectOnFail(e)) {
+                    failed = true;
+                }
+                else {
+                    response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
+                }
             }
         } while (failed);
 
@@ -132,7 +151,9 @@ public class SiloFrontend {
                         .setType(stringToType(observation.get(0)))
                         .setId(observation.get(1)).build());
             } catch (SauronException e) {
-                if (!error) errorMessage = e.getErrorMessage();
+                if (!error) {
+                    errorMessage = e.getErrorMessage();
+                }
                 error = true;
             }
         }
@@ -141,11 +162,16 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending report request...");
                 ReportResponse response = timedStub().report(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 this.prevTS = mergeTS(this.prevTS, valueTS);
+                display("Updated prevTS to " + this.prevTS);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
+                if (reconnectOnFail(e)) {
+                    failed = true;
+                }
                 else throw properException(e);
             }
         } while (failed);
@@ -164,8 +190,10 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending track request...");
                 response = timedStub().track(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
             } catch (StatusRuntimeException e) {
                 if (reconnectOnFail(e)) failed = true;
@@ -187,8 +215,10 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending trackMatch request...");
                 response = timedStub().trackMatch(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
             } catch (StatusRuntimeException e) {
                 if (reconnectOnFail(e)) failed = true;
@@ -210,8 +240,10 @@ public class SiloFrontend {
         do {
             failed = false;
             try {
+                display("Sending trackMatch request...");
                 response = timedStub().trace(request);
                 List<Integer> valueTS = response.getVector().getTsList();
+                display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
             } catch (StatusRuntimeException e) {
                 if (reconnectOnFail(e)) failed = true;
@@ -285,9 +317,6 @@ public class SiloFrontend {
     }
 
     private SauronException properException(StatusRuntimeException e) {
-        if (e.getStatus().getCode().equals(Status.Code.UNAVAILABLE)) {
-            return new SauronException(ErrorMessage.REFUSED);
-        }
         return reactToStatus(e.getStatus().getDescription());
     }
 
@@ -295,15 +324,17 @@ public class SiloFrontend {
         Status.Code code = exception.getStatus().getCode();
         try {
             if (code == Status.Code.UNAVAILABLE || code == Status.Code.DEADLINE_EXCEEDED) {
-                System.out.println("Failed:"+code.toString());
+                display("Failed to connect to replica: " + code.toString());
                 if (replicaNum > 1) {
                     _channel.shutdown();
+                    display("Choosing another replica to connect to...");
                     connect(-1);
                 }
                 return true;
             }
             return false;
         } catch (ZKNamingException e) {
+            display("Couldn't connect to any replica. Failing...");
             throw new SauronException(ErrorMessage.REFUSED);
         }
     }
@@ -462,4 +493,7 @@ public class SiloFrontend {
         }
     }
 
+    private static void display(String msg) {
+        System.out.println(msg);
+    }
 }
