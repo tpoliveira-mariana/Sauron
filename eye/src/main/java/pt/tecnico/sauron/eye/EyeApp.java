@@ -17,18 +17,18 @@ public class EyeApp {
 	private static SiloFrontend _frontend;
 
 	public static void main(String[] args) {
-		System.out.println(EyeApp.class.getSimpleName());
+		display(EyeApp.class.getSimpleName());
 		
 		// receive and print arguments
-		System.out.printf("Received %d arguments%n", args.length);
+		display("Received " + args.length + " arguments");
 		for (int i = 0; i < args.length; i++) {
-			System.out.printf("arg[%d] = %s%n", i, args[i]);
+			display("arg[" + i + "] = " + args[i]);
 		}
 
 		// check arguments
 		if (args.length > 6 || args.length < 5) {
-			System.out.println("Argument(s) missing!");
-			System.out.printf("Usage: java eye host port cameraName latitude longitude [replica instance]%n");
+			display("Argument(s) missing!");
+			display("Usage: java eye zkhost zkport cameraName latitude longitude [replicaInstance]");
 			return ;
 		}
 
@@ -55,7 +55,7 @@ public class EyeApp {
 			_frontend.camJoin(cameraName, lat, lon);
 		} catch (SauronException e) {
 			if (e.getErrorMessage() == ErrorMessage.DUPLICATE_CAMERA)
-				System.out.println("Camera already registered. Processing observations...");
+				display("Camera already registered. Processing observations...");
 
 			else {
 				shutDownMessage(e.getErrorMessageLabel());
@@ -72,7 +72,7 @@ public class EyeApp {
 				if (!handledSpecialLine(cameraName, line, observations)) {
 					StringTokenizer st = new StringTokenizer(line, ",");
 					if (st.countTokens() != 2) {
-						System.out.println("Invalid command.");
+						display("Invalid command.");
 						continue;
 					}
 					String objectType = st.nextToken();
@@ -114,7 +114,7 @@ public class EyeApp {
 		else if (line.startsWith("zzz")) {
 			StringTokenizer st = new StringTokenizer(line, ",");
 			if (st.countTokens() != 2) {
-				System.out.println("Invalid command.");
+				display("Invalid command.");
 				return true;
 			}
 			st.nextToken();	// remove zzz
@@ -125,7 +125,7 @@ public class EyeApp {
 
 			}
 			catch (NumberFormatException ne) {
-				System.out.println("Invalid command.");
+				display("Invalid command.");
 				return true;
 			}
 			catch (InterruptedException ie) {
@@ -142,14 +142,17 @@ public class EyeApp {
 			observations.clear();
 		}
 		catch (SauronException e) {
-			System.out.println("Some observations were not submitted - " + e.getErrorMessageLabel());
+			display("Some observations were not submitted - " + e.getErrorMessageLabel());
 			observations.clear();
 		}
 	}
 
 	private static void shutDownMessage(String msg) {
-		System.out.println(msg);
-		System.out.println("Shutting down...");
+		display(msg);
+		display("Shutting down...");
 	}
 
+	private static void display(String msg) {
+		System.out.println(msg);
+	}
 }

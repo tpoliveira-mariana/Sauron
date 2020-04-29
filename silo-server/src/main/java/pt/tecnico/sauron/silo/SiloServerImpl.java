@@ -3,7 +3,6 @@ package pt.tecnico.sauron.silo;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import io.grpc.ManagedChannel;
@@ -24,7 +23,6 @@ import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -480,11 +478,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private GossipRequest getGossipRequest(int newInstance){
         GossipRequest.Builder gossipReq = GossipRequest.newBuilder().setInstance(this.instance);
         List<Request> sendRecords = new ArrayList<>();
-        if (updateLog.isEmpty()){
+        if (updateLog.isEmpty()) {
             gossipReq.setReplicaTS(VectorTS.newBuilder().addAllTs(replicaTS).build()).addAllLogRecord(sendRecords);
         }
-        for (int i = 0; i < updateLog.size(); i++){
-            Record record = updateLog.get(i);
+        for (Record record : updateLog){
             List<Integer> currentTS = record.getUpdateTS();
             int requestInst = record.getHandlerInstance();
             if (currentTS.get(requestInst-1) > tableTS.get(newInstance-1).get(requestInst-1)) {
@@ -526,9 +523,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 record.setApplied(true);
                 this.valueTS = mergeTS(valueTS, record.getUpdateTS());
                 i = checkRecordRemoval(record, i) ? i-1 : i;
-            } catch (InvalidProtocolBufferException e) {
-
-            }
+            } catch (InvalidProtocolBufferException ignored) {}
         }
 
     }
@@ -538,9 +533,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         int recordInst = record.getHandlerInstance();
 
         for (int i = 0; i < tableTS.size(); i++) {
-            if (i == instance - 1)
-                continue;
-            if (tableTS.get(i).get(recordInst - 1) < updateTS.get(recordInst-1))
+            if (i != instance-1 && tableTS.get(i).get(recordInst - 1) < updateTS.get(recordInst-1))
                 return false;
         }
         updateLog.remove(index);
@@ -551,10 +544,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
-        }
-        catch(SauronException e) {
-            return;
-        }
+        } catch (SauronException ignore) {}
     }
 
     private void handleReport(ReportRequest request, String ts){
@@ -565,23 +555,17 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             cam = null;
         }
         List<Object> objects = request.getObjectList();
-        if (cam == null) {
-            return;
-        }
-        else {
-            for (Object obj : objects) {
-                try {
-                    String type = typeToString(obj.getType());
-                    SauronObject sauObj = silo.getObject(type, obj.getId());
-                    if (sauObj == null)
-                        sauObj = silo.addObject(type, obj.getId());
+        if (cam == null) return;
+        for (Object obj : objects) {
+            try {
+                String type = typeToString(obj.getType());
+                SauronObject sauObj = silo.getObject(type, obj.getId());
+                if (sauObj == null)
+                    sauObj = silo.addObject(type, obj.getId());
 
-                    SauronObservation observation = new SauronObservation(sauObj, cam, ts);
-                    silo.addObservation(observation);
-                } catch (SauronException e) {
-                    continue;
-                }
-            }
+                SauronObservation observation = new SauronObservation(sauObj, cam, ts);
+                silo.addObservation(observation);
+            } catch (SauronException ignore) {}
         }
     }
 
