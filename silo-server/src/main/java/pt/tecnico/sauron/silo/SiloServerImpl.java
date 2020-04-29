@@ -440,19 +440,21 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return updateID;
     }
 
-    public void performGossip(String serverPath){
+    public synchronized void performGossip(String serverPath){
         List<ZKRecord> replicas;
         //debug-System.out.println("Gossip round! Log:" + this.updateLog);
+        display("Replica " + instance + " initiating gossip...");
 
         try {
             replicas = new ArrayList<>(this.nameServer.listRecords(serverPath));
         } catch(ZKNamingException e){
-            System.out.println("Cannot perform gossip round - error getting replicas.");
+            display("Cannot perform gossip round - error getting replicas.");
             return;
         }
-        if (replicas.size() == 1)
-            // only replica available is the one calling the method or no updates to share
+        if (replicas.size() == 1) {
+            display("No more replicas available. No gossip performed by replica " + instance);
             return;
+        }
         try {
             String currentPath = serverPath + "/" + this.instance;
             int newInstance;
@@ -461,17 +463,21 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 newInstance = (new Random()).nextInt(replicas.size());
                 replicaPath = replicas.get(newInstance).getPath();
             } while (replicaPath.equals(currentPath) || newInstance >= replicaTS.size());
-            System.out.println("connecting to - " + replicaPath);
             ZKRecord record = this.nameServer.lookup(replicaPath);
             String target = record.getURI();
             ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
             SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
 
-            GossipResponse response = stub.gossip(getGossipRequest(newInstance + 1));
+
+            GossipRequest request = getGossipRequest(newInstance + 1);
+            display("Connecting to replica " + (newInstance + 1) + " at " + target +
+                        "...Sending " + request);
+            GossipResponse response = stub.gossip(request);
             //debug-System.out.println("Sent message to instance - " + replicaPath);
             channel.shutdown();
         } catch (ZKNamingException | StatusRuntimeException e){
             //Could not perform gossip round
+            display("An error occurred. No gossip performed by replica " + instance);
         }
     }
 
@@ -567,9 +573,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private void handleNewRequests(List<Request> requests){
+    private void handleNewRequests(List<Request> requests) {
+        display("Received " + requests.size() + " new requests. Handling them...");
         if (requests.isEmpty())
             return;
+
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
             int requestInst = request.getInstance();
@@ -579,6 +587,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 //debug-System.out.println("Added to log - " + Timestamps.toString(request.getTimestamp()));
                 //check if replicaTS is outdated in relation to updateTS
                 updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp())));
+                display("Added new request. updateTS = " + reqTS + " | replicaTS = " + replicaTS);
             }
         });
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
@@ -595,5 +604,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
 
+    private static void display(String msg) {
+        System.out.println(msg);
+    }
 
 }

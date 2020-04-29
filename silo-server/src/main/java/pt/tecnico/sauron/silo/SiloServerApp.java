@@ -62,7 +62,7 @@ public class SiloServerApp {
 			// Start the server
 			server.start();
 			// Server threads are running in the background.
-			System.out.println("Server started");
+			System.out.println("Replica " + instance + " started");
 
 			Timer timer = new Timer();
 			timer.schedule(new ScheduledTimer(), gossipTimer*1000, gossipTimer*1000);
@@ -79,7 +79,7 @@ public class SiloServerApp {
 			server.awaitTermination();
 			timer.cancel();
 		} catch (IOException ioe) {
-			System.out.println("Can't start server.");
+			System.out.println("Can't start replica server.");
 		} catch (InterruptedException ie) {
 			Thread.currentThread().interrupt();
 		} catch (ZKNamingException e) {
