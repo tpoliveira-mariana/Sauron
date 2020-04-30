@@ -451,34 +451,57 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             display("Cannot perform gossip round - error getting replicas.");
             return;
         }
-        if (replicas.size() == 1) {
+        if (replicas.size() == 1 || replicaTS.size() == 1) { //remove second condition for testing connections
             display("No more replicas available. No gossip performed by replica " + instance);
             return;
         }
-        try {
-            String currentPath = serverPath + "/" + this.instance;
-            int newInstance;
-            String replicaPath;
-            do {
-                newInstance = (new Random()).nextInt(replicas.size());
-                replicaPath = replicas.get(newInstance).getPath();
-            } while (replicaPath.equals(currentPath) || newInstance >= replicaTS.size());
-            ZKRecord record = this.nameServer.lookup(replicaPath);
-            String target = record.getURI();
-            ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-            SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
-
-
-            GossipRequest request = getGossipRequest(newInstance + 1);
-            display("Connecting to replica " + (newInstance + 1) + " at " + target +
-                        "...Sending " + request);
-            GossipResponse response = stub.gossip(request);
-            //debug-System.out.println("Sent message to instance - " + replicaPath);
-            channel.shutdown();
-        } catch (ZKNamingException | StatusRuntimeException e){
-            //Could not perform gossip round
-            display("An error occurred. No gossip performed by replica " + instance);
+        String replicaPath;
+        String currentPath = serverPath + "/" + this.instance;
+        int newInstance, startInstance, replicaNum;
+        Set<Integer> seen = new HashSet<>();
+        do {
+            startInstance = newInstance = (new Random()).nextInt(replicas.size());
+            replicaPath = replicas.get(newInstance).getPath();
+            replicaNum = Integer.parseInt(replicaPath.substring(replicaPath.lastIndexOf('/') + 1));
+            seen.add(replicaNum);
+        } while ((replicaNum == this.instance || replicaNum > this.replicaTS.size()) && seen.size() != replicas.size()); //remove = for testing connections
+        if (seen.size() == replicas.size() && (replicaNum > replicaTS.size() || replicaNum == this.instance)) {
+            display("No more replicas available. No gossip performed by replica " + instance);
+            return;
         }
+        boolean failed = false;
+        do {
+            failed = false;
+            try {
+                ZKRecord record = this.nameServer.lookup(replicaPath);
+                String target = record.getURI();
+                ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
+                SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
+
+
+                GossipRequest request = getGossipRequest(replicaNum);
+                display("Connecting to replica " + replicaNum + " at " + target +
+                        "...");
+                GossipResponse response = stub.gossip(request);
+                //debug-System.out.println("Sent message to instance - " + replicaPath);
+                channel.shutdown();
+                display("Gossip to replica " + replicaNum + " successful, exiting gossip gossip");
+            } catch (ZKNamingException | StatusRuntimeException e) {
+                //Could not perform gossip to the replica(connection failed)
+                display("An error occurred. Couldn't perform gossip with replica " + replicaNum + ". Changing replica...");
+                do {
+                    newInstance = (newInstance + 1) % replicas.size();
+                    replicaPath = replicas.get(newInstance).getPath();
+                    replicaNum = Integer.parseInt(replicaPath.substring(replicaPath.lastIndexOf('/') + 1));
+                } while (replicaPath.equals(currentPath) || replicaNum > this.replicaTS.size());
+                failed = true;
+                display(newInstance + " - " + startInstance);
+                if (newInstance == startInstance){
+                    display("Completed round through all available replicas without any successful connection. No Gossip performed by replica " + instance);
+                    failed = false;
+                }
+            }
+        } while (failed);
     }
 
     private GossipRequest getGossipRequest(int newInstance){
