@@ -18,15 +18,27 @@ Sistemas Distribuídos 2019-2020, segundo semestre
 
 ## Melhorias da primeira parte
 
-_(que correções ou melhorias foram feitas ao código da primeira parte -- incluir link para commits no GitHub onde a alteração foi feita)_
-
-- [descrição da alteração](https://github.com/tecnico-distsys/CXX-Sauron/commit/156e1ac25798e2360b362b3a8fc474f7cfe64d01)
+- [Adição de testes ao comando trace](https://github.com/tecnico-distsys/A20-Sauron/commit/bca534e2c7fd1d997ff14e00fad5211b07dcbcf0)
+- [Adição de testes ao comando cam_join](https://github.com/tecnico-distsys/A20-Sauron/commit/ff15d99e0141b82c9fd22776e5f24157cc2fc2c7)
+- [Formatação de output removida do SiloFrontend](https://github.com/tecnico-distsys/A20-Sauron/commit/5eefeb7a9514c07af7c8fd3438820cded4ec55c9)
 
 
 ## Modelo de faltas
+Considerem-se os pressupostos do enunciado.
+Seja _f_ o número de faltas a tolerar, então são necessárias, no mínimo, _f + 1_ réplicas 
+e a réplica funcional não pode guardar dados cuja memória ocupada seja superior ao tamanho máximo de uma mensagem de gRPC.
 
-_(que faltas são toleradas, que faltas não são toleradas)_
+##### Faltas toleradas:
+* Falta do cliente;
+* Omissão de mensagens por parte dos canais de comunicação;
+* Partições da rede;
+* Falta silenciosa de réplicas, apenas se o espaço ocupado pelas estruturas de dados da réplica
+que as tenta recuperar for **inferior** ao limite de tamanho de uma mensagem gRPC.
 
+##### Faltas não toleradas:
+* Falta silenciosa de réplicas, se o espaço ocupado pelas estruturas de dados da réplica
+que as tenta recuperar for **superior** ao limite de tamanho de uma mensagem gRPC.
+* Falta do Zookeeper
 
 ## Solução
 
