@@ -43,6 +43,7 @@ message CamJoinRequest {
     string name = 1;
     Coordinates coordinates = 2;
     VectorTS vector = 3;
+    string opId = 4;
 }
 
 message CamJoinResponse {
@@ -62,6 +63,7 @@ message ReportRequest {
     string name = 1;
     repeated Object object = 2;
     VectorTS vector = 3;
+    string opId = 4;
 }
 
 message ReportResponse {
@@ -116,6 +118,7 @@ message Request{
     VectorTS updateTS = 3;
     google.protobuf.Timestamp timestamp = 4;
     int32 instance = 5;
+    string opId = 6;
 }
 
 message GossipRequest {

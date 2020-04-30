@@ -44,6 +44,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> replicaTS;
     private List<Integer> valueTS;
     private List<List<Integer>> tableTS;
+    private Set<UUID> opIds = new HashSet<>();
     private int instance;
     private ZKNaming nameServer;
 
@@ -66,21 +67,24 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         private int _handlerInstance;
         private boolean _applied = false;
         String _timestamp;
+        UUID _opId;
 
-        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, ZonedDateTime ts){
+        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, ZonedDateTime ts, UUID opId){
             _request = request;
             _prevTS = prevTS;
             _updateTS = updateTS;
             _handlerInstance = inst;
             _timestamp = ts.format(formatter);
+            _opId = opId;
         }
 
-        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, String ts){
+        public Record(Any request, List<Integer> prevTS, List<Integer> updateTS, int inst, String ts, UUID opId){
             _request = request;
             _prevTS = prevTS;
             _updateTS = updateTS;
             _handlerInstance = inst;
             _timestamp = ts;
+            _opId = opId;
         }
 
         public Any getRequest() {
@@ -107,6 +111,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             return _timestamp;
         }
 
+        public UUID getOpId() {
+            return _opId;
+        }
+
         public void setApplied(boolean _applied) {
             this._applied = _applied;
         }
@@ -125,7 +133,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
-        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
+        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
         //debug-System.out.println(updateID);
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
 
@@ -152,7 +160,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
-        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList());
+        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
 
         ReportResponse response = ReportResponse.newBuilder().setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
         responseObserver.onNext(response);
@@ -411,7 +419,11 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return true;
     }
 
-    private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS) {
+    private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS, UUID opId) {
+
+        // check if request is duplicated
+        if (opIds.contains(opId))
+            return prevTS;
 
         // update replicaTS
         int i = this.instance -1;
@@ -423,8 +435,9 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
-        Record record = new Record(request, prevTS, updateID, this.instance, ZonedDateTime.now());
+        Record record = new Record(request, prevTS, updateID, this.instance, ZonedDateTime.now(), opId);
         this.updateLog.add(record);
+        this.opIds.add(opId);
         if (tsAfter(valueTS, prevTS)) {
             try {
                 if (request.is(CamJoinRequest.class))
@@ -522,7 +535,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 } catch (ParseException e) {
                     ts = Timestamp.getDefaultInstance();
                 }
-                Request req = Request.newBuilder().setRequest(record.getRequest()).setInstance(requestInst).setUpdateTS(updateTS).setPrevTS(prevTS).setTimestamp(ts).build();
+                Request req = Request.newBuilder()
+                        .setRequest(record.getRequest())
+                        .setInstance(requestInst)
+                        .setUpdateTS(updateTS).setPrevTS(prevTS)
+                        .setTimestamp(ts)
+                        .setOpId(record.getOpId().toString())
+                        .build();
                 sendRecords.add(0, req); //add to the beginning
             }
         }
@@ -564,6 +583,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 return false;
         }
         updateLog.remove(index);
+        opIds.remove(record.getOpId());
         return true;
     }
 
@@ -606,10 +626,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             int requestInst = request.getInstance();
             //debug-System.out.println("updateTS - " + reqTS);
             //debug-System.out.println("replicaTS - " + this.replicaTS);
-            if (reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
+            UUID opId = UUID.fromString(request.getOpId());
+            if (!opIds.contains(opId) && reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
                 //debug-System.out.println("Added to log - " + Timestamps.toString(request.getTimestamp()));
                 //check if replicaTS is outdated in relation to updateTS
-                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp())));
+                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp()), opId));
+                opIds.add(opId);
                 display("Added new request. updateTS = " + reqTS + " | replicaTS = " + replicaTS);
             }
         });
