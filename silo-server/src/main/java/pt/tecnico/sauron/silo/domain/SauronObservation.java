@@ -43,7 +43,7 @@ public class SauronObservation implements Comparable<SauronObservation> {
         _cam = cam;
     }
 
-    private void setTimeStamp(String ts) {
+    public void setTimeStamp(String ts) {
         _ts = ts;
     }
 

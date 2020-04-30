@@ -47,7 +47,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> replicaTS;
     private List<Integer> valueTS;
     private List<List<Integer>> tableTS;
-    private Set<UUID> opIds = new HashSet<>();
+    private Map<UUID, Record> opIds = new HashMap<>();
     private int instance;
     private ZKNaming nameServer;
 
@@ -69,6 +69,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         private List<Integer> _updateTS;
         private int _handlerInstance;
         private boolean _applied = false;
+
         String _timestamp;
         UUID _opId;
 
@@ -118,8 +119,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             return _opId;
         }
 
-        public void setApplied(boolean _applied) {
-            this._applied = _applied;
+        public void setApplied(boolean applied) {
+            _applied = applied;
+        }
+
+        public void setTimestamp(String ts) {
+            _timestamp = ts;
         }
 
         @Override
@@ -425,7 +430,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS, UUID opId) {
 
         // check if request is duplicated
-        if (opIds.contains(opId))
+        if (opIds.containsKey(opId))
             return prevTS;
 
         // update replicaTS
@@ -440,7 +445,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         // add request to log
         Record record = new Record(request, prevTS, updateID, this.instance, ZonedDateTime.now(), opId);
         this.updateLog.add(record);
-        this.opIds.add(opId);
+        this.opIds.put(opId, record);
         if (tsAfter(valueTS, prevTS)) {
             try {
                 if (request.is(CamJoinRequest.class))
@@ -628,17 +633,42 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             int requestInst = request.getInstance();
             //debug-System.out.println("updateTS - " + reqTS);
             //debug-System.out.println("replicaTS - " + this.replicaTS);
-            UUID opId = UUID.fromString(request.getOpId());
-            if (!opIds.contains(opId) && reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
+            if (reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
                 //debug-System.out.println("Added to log - " + Timestamps.toString(request.getTimestamp()));
                 //check if replicaTS is outdated in relation to updateTS
-                updateLog.add(new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp()), opId));
-                opIds.add(opId);
-                display("Added new request. updateTS = " + reqTS + " | replicaTS = " + replicaTS);
+                UUID opId = UUID.fromString(request.getOpId());
+                Record record = new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp()), opId);
+                if (opIds.containsKey(opId))
+                    enforceReportConsistency(opIds.get(opId), record);
+                else {
+                    updateLog.add(record);
+                    opIds.put(opId, record);
+                    display("Added new request. updateTS = " + reqTS + " | replicaTS = " + replicaTS);
+                }
             }
         });
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
         //debug-System.out.println("Log after received gossip - " + this.updateLog);
+    }
+
+    private void enforceReportConsistency(Record current, Record duplicate) {
+        if (!current.getRequest().is(ReportRequest.class) || !duplicate.getRequest().is(ReportRequest.class))
+            return;
+        if (ZonedDateTime.parse(duplicate.getTimestamp()).isAfter(ZonedDateTime.parse(current.getTimestamp())))
+            return;
+        try {
+            ReportRequest request = current.getRequest().unpack(ReportRequest.class);
+            if (current.isApplied()) {
+                for (Object obj : request.getObjectList()) {
+                    SauronCamera sauCam = silo.getCamByName(request.getName());
+                    SauronObject sauObj = silo.getObject(typeToString(obj.getType()), obj.getId());
+                    SauronObservation sauObs = silo.findObservation(sauObj, sauCam, current.getTimestamp());
+                    sauObs.setTimeStamp(duplicate.getTimestamp());
+                }
+            } else {
+                current.setTimestamp(duplicate.getTimestamp());
+            }
+        } catch (InvalidProtocolBufferException | SauronException ignore) {}
     }
 
     private List<Integer> mergeTS(List<Integer> ts1, List<Integer> ts2) {

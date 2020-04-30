@@ -68,6 +68,14 @@ public class Silo {
         }
     }
 
+    public SauronObservation findObservation(SauronObject sauObj, SauronCamera sauCam, String ts) {
+        for (SauronObservation sauObs : _obs.get(sauObj)) {
+            if (sauObs.getCamera().equals(sauCam) && sauObs.getTimeStamp().equals(ts))
+                return sauObs;
+        }
+        return null;
+    }
+
     public SauronCamera getCamByName(String name) throws SauronException {
         SauronCamera.checkAttributes(name, 0, 0);
         SauronCamera cam = _cams.get(name);
