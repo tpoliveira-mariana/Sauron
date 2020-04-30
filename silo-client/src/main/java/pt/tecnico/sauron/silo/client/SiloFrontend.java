@@ -40,7 +40,7 @@ public class SiloFrontend {
     private List<Integer> prevTS;
     private final int replicaNum;
 
-    private static final int MIL_TIMEOUT = 5000;
+    private static final int STUB_TIMEOUT = 5000;
 
     private Map<String, Any> responses = new HashMap<>();
 
@@ -80,7 +80,7 @@ public class SiloFrontend {
     }
 
     private SauronGrpc.SauronBlockingStub timedStub() {
-        return _stub.withDeadlineAfter(MIL_TIMEOUT, TimeUnit.MILLISECONDS);
+        return _stub.withDeadlineAfter(STUB_TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {

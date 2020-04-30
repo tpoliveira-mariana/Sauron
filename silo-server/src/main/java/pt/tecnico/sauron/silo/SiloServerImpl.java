@@ -23,6 +23,7 @@ import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     // partially detect invalid car partial id
     private static final Pattern INVAL_CAR_PATT = Pattern.compile(".*[*][*].*|.*[^A-Z0-9*].*");
+
+    private static final int STUB_TIMEOUT = 10000;
 
     private List<Record> updateLog = new ArrayList<>();
     private List<Integer> replicaTS;
@@ -482,7 +485,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             display("No more replicas available. No gossip performed by replica " + instance);
             return;
         }
-        boolean failed = false;
+        boolean failed;
         do {
             failed = false;
             try {
@@ -491,14 +494,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
                 SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
 
-
                 GossipRequest request = getGossipRequest(replicaNum);
                 display("Connecting to replica " + replicaNum + " at " + target +
                         "...");
-                GossipResponse response = stub.gossip(request);
-                //debug-System.out.println("Sent message to instance - " + replicaPath);
+                stub.withDeadlineAfter(STUB_TIMEOUT, TimeUnit.MILLISECONDS).gossip(request);
+
                 channel.shutdown();
-                display("Gossip to replica " + replicaNum + " successful, exiting gossip gossip");
+                display("Gossip to replica " + replicaNum + " successful, exiting gossip");
             } catch (ZKNamingException | StatusRuntimeException e) {
                 //Could not perform gossip to the replica(connection failed)
                 display("An error occurred. Couldn't perform gossip with replica " + replicaNum + ". Changing replica...");
