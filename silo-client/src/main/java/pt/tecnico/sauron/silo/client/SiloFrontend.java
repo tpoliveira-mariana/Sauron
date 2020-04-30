@@ -90,6 +90,7 @@ public class SiloFrontend {
         CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
                                                             .setCoordinates(coordinates)
                                                             .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+                                                            .setOpId(UUID.randomUUID().toString())
                                                             .build();
         do {
             failed = false;
@@ -157,7 +158,8 @@ public class SiloFrontend {
                 error = true;
             }
         }
-        ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build()).build();
+        ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+                .setOpId(UUID.randomUUID().toString()).build();
 
         do {
             failed = false;
