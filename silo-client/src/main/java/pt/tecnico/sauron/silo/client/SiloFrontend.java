@@ -39,6 +39,7 @@ public class SiloFrontend {
     private static final String SERVER_PATH = "/grpc/sauron/silo";
     private List<Integer> prevTS;
     private final int replicaNum;
+    private int currentInstance;
 
     private static final int STUB_TIMEOUT = 5000;
 
@@ -63,15 +64,19 @@ public class SiloFrontend {
                 throw new SauronException(ErrorMessage.REFUSED);
             }
             record = replicas.get((new Random()).nextInt(replicas.size()));
+            path = record.getPath();
+            currentInstance = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
         } else {
+            display("Trying connection to instance: " + instance);
             record = nameServer.lookup(path);
+            currentInstance = instance;
         }
         try {
             String target = record.getURI();
             _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
             _stub = SauronGrpc.newBlockingStub(_channel);
 
-            display("Connected to: " + record.getPath());
+            display("Connected to: " + path);
         }
         catch (IllegalArgumentException e) {
             display("Couldn't build channel. Failing...");
@@ -85,6 +90,7 @@ public class SiloFrontend {
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
         boolean failed;
+        int instance = currentInstance;
         checkCamera(name, lat, lon);
         Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
         CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
@@ -102,10 +108,10 @@ public class SiloFrontend {
                 this.prevTS = mergeTS(this.prevTS, valueTS);
                 display("Updated prevTS to " + this.prevTS);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) {
+                if (reconnectOnFail(e, instance)) {
                     failed = true;
-                }
-                else throw properException(e);
+                    instance = -1;
+                } else throw properException(e);
             }
         } while (failed);
 
@@ -113,6 +119,7 @@ public class SiloFrontend {
 
     public double[] camInfo(String name) throws SauronException {
         boolean failed;
+        int instance = currentInstance;
         checkCameraName(name);
         CamInfoResponse response = null;
         CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
@@ -126,12 +133,10 @@ public class SiloFrontend {
                 display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) {
+                if (reconnectOnFail(e, instance)) {
                     failed = true;
-                }
-                else {
-                    response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
-                }
+                    instance = -1;
+                } else response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
             }
         } while (failed);
 
@@ -141,6 +146,7 @@ public class SiloFrontend {
     public void report(String name, List<List<String>> observations) throws SauronException {
         checkCameraName(name);
         boolean failed;
+        int instance = currentInstance;
         boolean error = false;
         ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
 
@@ -171,10 +177,10 @@ public class SiloFrontend {
                 this.prevTS = mergeTS(this.prevTS, valueTS);
                 display("Updated prevTS to " + this.prevTS);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) {
+                if (reconnectOnFail(e, instance)) {
                     failed = true;
-                }
-                else throw properException(e);
+                    instance = -1;
+                } else throw properException(e);
             }
         } while (failed);
 
@@ -183,6 +189,7 @@ public class SiloFrontend {
 
     public TrackResponse track(String type, String id) throws SauronException {
         boolean failed;
+        int instance = currentInstance;
         TrackResponse response = null;
         checkObjectArguments(type, id, false);
         TrackRequest request = TrackRequest.newBuilder()
@@ -198,8 +205,10 @@ public class SiloFrontend {
                 display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else response = getConsistentError(e, "track"+type+id, TrackResponse.class);
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else response = getConsistentError(e, "track"+type+id, TrackResponse.class);
             }
         } while (failed);
 
@@ -208,6 +217,7 @@ public class SiloFrontend {
 
     public TrackMatchResponse trackMatch(String type, String id) throws SauronException {
         boolean failed;
+        int instance = currentInstance;
         TrackMatchResponse response = null;
         checkObjectArguments(type, id, true);
         TrackMatchRequest request = TrackMatchRequest.newBuilder()
@@ -223,8 +233,10 @@ public class SiloFrontend {
                 display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else response = getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else response = getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
             }
         } while (failed);
 
@@ -233,6 +245,7 @@ public class SiloFrontend {
 
     public TraceResponse trace(String type, String id) throws SauronException {
         boolean failed;
+        int instance = currentInstance;
         TraceResponse response = null;
         checkObjectArguments(type, id, false);
         TraceRequest request = TraceRequest.newBuilder()
@@ -248,8 +261,10 @@ public class SiloFrontend {
                 display("Received response with TS: " + valueTS);
                 response = getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
             } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else response = getConsistentError(e, "trace"+type+id, TraceResponse.class);
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else response = getConsistentError(e, "trace"+type+id, TraceResponse.class);
             }
         } while (failed);
 
@@ -258,32 +273,37 @@ public class SiloFrontend {
 
     public String ctrlPing(String input) throws SauronException {
         PingResponse response = null;
+        int instance = currentInstance;
         PingRequest request = PingRequest.newBuilder().setInput(input).build();
         boolean failed;
         do {
             failed = false;
             try {
                 response = _stub.ctrlPing(request);
-            }
-            catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else throw properException(e);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else throw properException(e);
             }
         } while (failed);
         return response.getOutput();
     }
 
     public void ctrlClear() throws SauronException {
-        ClearRequest request = ClearRequest.getDefaultInstance();
         boolean failed;
+        int instance = currentInstance;
+        ClearRequest request = ClearRequest.getDefaultInstance();
         do {
             failed = false;
             try {
                 _stub.ctrlClear(request);
             }
             catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e)) failed = true;
-                else throw properException(e);
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else throw properException(e);
             }
         } while (failed);
     }
@@ -332,7 +352,7 @@ public class SiloFrontend {
         return reactToStatus(e.getStatus().getDescription());
     }
 
-    private boolean reconnectOnFail(StatusRuntimeException exception) throws SauronException {
+    private boolean reconnectOnFail(StatusRuntimeException exception, int instance) throws SauronException {
         Status.Code code = exception.getStatus().getCode();
         try {
             if (code == Status.Code.UNAVAILABLE || code == Status.Code.DEADLINE_EXCEEDED) {
@@ -340,7 +360,7 @@ public class SiloFrontend {
                 if (replicaNum > 1) {
                     _channel.shutdown();
                     display("Choosing another replica to connect to...");
-                    connect(-1);
+                    connect(instance);
                 }
                 return true;
             }

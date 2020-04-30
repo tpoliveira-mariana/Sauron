@@ -47,7 +47,8 @@ public class SpotterApp {
 	private static void waitInput() {
 		display("Type <help> for usage");
 		try (Scanner scanner = new Scanner(System.in)) {
-			System.out.print("Insert command ->");
+			System.out.print("Insert command -> ");
+			System.out.flush();
 			while(scanner.hasNextLine()){
 				String command = scanner.nextLine();
 				String[] arguments = command.split(" ");
@@ -85,7 +86,8 @@ public class SpotterApp {
 						display("Invalid Command! Type <help> to display available commands");
 						break;
 				}
-				System.out.print("Insert command ->");
+				System.out.print("Insert command -> ");
+				System.out.flush();
 			}
 		}
 	}
