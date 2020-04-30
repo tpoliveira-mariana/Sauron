@@ -141,7 +141,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
-        System.out.println(request.getOpId());
         List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
         //debug-System.out.println(updateID);
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
@@ -431,9 +430,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS, UUID opId) {
 
         // check if request is duplicated
-        if (opIds.containsKey(opId)) {
+        if (opIds.containsKey(opId))
             return prevTS;
-        }
 
         // update replicaTS
         int i = this.instance -1;

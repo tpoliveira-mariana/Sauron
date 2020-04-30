@@ -359,7 +359,7 @@ public class SiloFrontend {
                 display("Failed to connect to replica: " + code.toString());
                 if (replicaNum > 1) {
                     _channel.shutdown();
-                    display("Choosing another replica to connect to...");
+                    display((instance != -1) ? "Retrying connection to: " + instance : "Choosing another replica to connect to...");
                     connect(instance);
                 }
                 return true;
