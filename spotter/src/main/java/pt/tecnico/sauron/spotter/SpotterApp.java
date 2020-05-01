@@ -261,6 +261,8 @@ public class SpotterApp {
 		switch(e.getErrorMessage()) {
 			case INVALID_CAM_NAME:
 				return "Invalid camera name";
+			case CAMERA_NOT_FOUND:
+				return "Non existing camera";
 			case OBJECT_NOT_FOUND:
 				return "No ID matches the one given!";
 			case INVALID_PERSON_ID:
