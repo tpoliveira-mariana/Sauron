@@ -1,0 +1,13 @@
+# Register 2 observations
+person,15
+car,1122AA
+
+#sleep 2 seconds
+zzz,2000
+
+# Register 5 observations
+person,17
+person,23
+person,19
+car,1122BB
+car,11AA22

@@ -64,16 +64,267 @@ $ spotter localhost 2181
 
 **Nota:** Para correr o script *spotter* é necessário fazer `mvn install` e adicionar ao *PATH* ou utilizar diretamente os executáveis gerados na diretoria `target/appassembler/bin/`.
 
-Com as instruções acima é possível correr qualquer tipo de instrução suportada pela aplicação.
-De seguida demonstram-se algumas situações de replicação e de tolerância a faltas.  
+Com as instruções acima é possível correr qualquer tipo de instrução suportada pela aplicação (seccção *2.*).
+Posteriormente demonstram-se-ão algumas situações de replicação e de tolerância a faltas (secção *3.*).  
 
 
-## 2. Replicação e Tolerância a Faltas
+##2. Demonstração Funcionalidades
+
+Nesta secção vamos correr os comandos necessários para testar todas as operações. 
+Cada subsecção é respetiva a cada operação presente no *silo*.
+
+Para iniciar a execução dos comandos desta secção é necessário lançar uma réplica com o comando seguinte na diretoria `silo-server`:
+
+```
+$ mvn exec:java
+```
+
+### 2.1. *cam_join*
+
+Para testar este comando e para popular a réplica criamos três câmeras diferentes e enviamos observações à réplica com os seguinte comandos:
+
+```
+$ eye localhost 2181 Tagus 38.737613 -9.303164 < eye_1.txt
+$ eye localhost 2181 Alameda 30.303164 -10.737613 < eye_2.txt
+$ eye localhost 2181 Lisboa 32.737613 -15.303164 < eye_3.txt
+```
+
+Existem também algumas restrições que podem ser testadas como as seguintes:
+
+- 2.1.1. Teste do tamanho do nome.  
+O servidor deve rejeitar esta operação. 
+Para isso basta executar um *eye* com o seguinte comando:
+
+```
+$ eye localhost 2181 ab 10.0 10.0
+$ eye localhost 2181 abcdefghijklmnop 10.0 10.0
+```
+
+Deve ser obtida a seguinte resposta
+```
+Invalid camera name provided.
+```
+
+### 2.2. *report*
+
+Esta operação já foi testada no comando anterior ao popular a réplica.
+
+No entanto falta testar o sucesso do comando *zzz*. 
+Para testar basta abrir um cliente *spotter* e correr o comando seguinte:
+
+```
+-> trail person 1
+```
+
+O resultado deverá ser o seguinte, em que os timestamps têm cerca de dois segundos de diferença
+
+```
+person,1,[timestamp],Tagus,38.737613,-9.303164
+person,1,[timestamp],Tagus,38.737613,-9.303164
+```
+
+### 2.3. *cam_info*
+
+Para executar todos os seguintes comandos é necessário manter o cliente *spotter* lançado anteriormente:
+
+2.3.1. Teste para uma câmera existente. 
+De seguida, corremos o comando:
+
+```
+-> info Alameda
+```
+
+Deve ser obtida a resposta:
+
+```
+Alameda,30.303164,-10.737613
+```
+
+2.3.2. Teste para câmera inexistente.  
+
+Correndo o seguinte comando:
+
+```
+-> info aaaaa
+```
+
+Deve ser obtida a resposta:
+
+```
+Invalid usage of info - Non existing camera
+```
+
+### 2.4. *track*
+
+Esta operação vai ser testada utilizando o comando *spot* com um identificador.
+
+2.5.1. Teste com uma pessoa inexistente:
+
+```
+-> spot person 9
+```
+
+Deverá devolver:
+
+```
+Invalid usage of spot - No ID matches the one given!
+```
+
+2.4.2. Teste com uma pessoa:
+
+```
+-> spot person 15
+```
+
+Deverá devolver:
+
+```
+person,15,[timestamp],Alameda,30.303164,-10.737613
+```
+
+2.4.3. Teste com um carro:
+
+```
+-> spot car 11AA22
+```
+
+Deverá devolver:
+
+```
+car,[timestamp],Alameda,30.303164,-10.737613
+```
+
+### 2.5. *trackMatch*
+
+Esta operação vai ser testada utilizando o comando *spot* com um fragmento de identificador.
+
+2.5.1. Teste com uma pessoa inexistente:
+
+```
+-> spot person 9*
+```
+
+Deverá devolver:
+
+```
+Invalid usage of spot - No ID matches the one given!
+```
+
+2.5.2. Teste com uma pessoa:
+
+```
+-> spot person 2*
+```
+
+Deverá devolver:
+
+```
+person,[timestamp],Alameda,30.303164,-10.737613
+```
+
+2.5.3. Teste com quatro pessoas:
+
+```
+-> spot person 1*
+```
+
+Deverá devolver:
+
+```
+person,1,[timestamp],Tagus,38.737613,-9.303164
+person,15,[timestamp],Alameda,30.303164,-10.737613
+person,17,[timestamp],Lisboa,32.737613,-15.303164
+person,19,[timestamp],Lisboa,32.737613,-15.303164
+```
+
+
+2.5.4. Teste com um carro:
+
+```
+-> spot car 11AA*
+car,00AA00,<timestamp>,Tagus,38.737613,-9.303164
+```
+
+Deverá devolver:
+
+```
+car,11AA22,[timestamp],Alameda,30.303164,-10.737613
+```
+
+2.5.5. Teste com dois carros:
+
+```
+-> spot car 1122*
+```
+
+Deverá responder:
+
+```
+car,1122AA,[timestamp],Lisboa,32.737613,-15.303164
+car,1122BB,[timestamp],Lisboa,32.737613,-15.303164
+```
+
+### 2.6. *trace*
+
+Esta operação vai ser testada utilizando o comando *trail* com um identificador.
+
+2.6.1. Teste com uma pessoa inexistente:
+
+```
+> trail person 9
+```
+
+Deverá devolver:
+
+```
+Invalid usage of trail - No ID matches the one given!
+```
+
+2.6.2. Teste com uma pessoa:
+
+```
+-> trail person 19
+```
+
+Deverá devolver:
+
+```
+person,19,[timestamp],Lisboa,32.737613,-15.303164
+person,19,[timestamp],Alameda,30.303164,-10.737613
+```
+
+2.6.3. Teste com um carro inexistente:
+
+```
+-> trail car AABB77
+```
+
+Deverá devolver:
+
+```
+Invalid usage of trail - No ID matches the one given!
+```
+
+2.6.4. Teste com um carro:
+
+```
+-> trail car 1122AA
+```
+
+Deverá devolver:
+
+```
+car,1122AA,[timestamp],Lisboa,32.737613,-15.303164
+car,1122AA,[timestamp],Alameda,30.303164,-10.737613
+car,1122AA,[timestamp],Tagus,38.737613,-9.303164
+```
+
+## 3. Replicação e Tolerância a Faltas
 
 Nesta secção vamos efetuar os procedimentos de forma a exemplificar os mecanismos de replicação, coerência no cliente e de tolerância a faltas da aplicação. 
 Cada subsecção é respetiva a uma situação possível de acontecer durante a execução da aplicação *silo*.
 
-### 2.1. Replicação e Coerência no Cliente
+### 3.1. Replicação e Coerência no Cliente
 
 Nesta subsecção iremos apresentar exemplos do mecanismo de replicação e de coerência no cliente em atuação.
 
@@ -186,10 +437,10 @@ person,15,[timestamp],Alameda,30.303164,-10.737613
 person,17,[timestamp],Alameda,30.303164,-10.737613
 ```
 
-### 2.2. Tolerância a Faltas
+### 3.2. Tolerância a Faltas
 
 
-## 3. Correr Testes Automáticos
+## 4. Correr Testes Automáticos
 
 Para correr os testes automáticos é necessário primeiro lançar uma réplica com o comando seguinte na diretoria `silo-server`:
 
@@ -202,5 +453,7 @@ De seguida para executar os testes basta correr o seguinte comando na diretoria 
 ```
 mvn verify
 ```
+
+## 5. Notas Finais
 
 

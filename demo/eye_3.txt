@@ -1,0 +1,7 @@
+# Register observations
+person,17
+person,19
+car,1122AA
+car,1133BB
+car,1122BB
+car,AABB33
