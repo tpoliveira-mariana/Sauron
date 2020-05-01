@@ -11,7 +11,7 @@ Sistemas Distribuídos 2019-2020, segundo semestre
 | -------|-------------------|-----------------------------------------| -------------------------------------------------------------------|
 | 89403  | Alexandre Duarte  | <https://github.com/alexduarte23>       | <mailto:alexandre.a.duarte@tecnico.ulisboa.pt>                     |
 | 89426  | Daniel Lopes      | <https://github.com/DFL13>              | <mailto:daniel.f.lopes@tecnico.ulisboa.pt>                         |
-| 89504  | Mariana Oliveira  | <https://github.com/tpoliveira-mariana> | <mailto:mariana.de.oliveira@tecnico.ulisboa.pt@tecnico.ulisboa.pt> |
+| 89504  | Mariana Oliveira  | <https://github.com/tpoliveira-mariana> | <mailto:mariana.de.oliveira@tecnico.ulisboa.pt> |
 
 ![Alexandre Duarte](images/89403.jpg) ![Daniel Lopes](images/89426.png) ![Mariana Oliveira](images/89504.jpg)
 
@@ -24,7 +24,7 @@ Sistemas Distribuídos 2019-2020, segundo semestre
 
 
 ## Modelo de faltas
-Considerem-se os pressupostos do enunciado.
+Considerem-se os pressupostos do enunciado. Seja 'cliente' um sinónimo de SiloFrontend.
 Seja _f_ o número de faltas a tolerar, então são necessárias, no mínimo, _f + 1_ réplicas.
 Desde que haja uma réplica funcional, o cliente consegue sempre ligar-se a ela e enviar
 os seus pedido. 
@@ -42,9 +42,10 @@ os seus pedido.
 
 ## Solução
 
-![Fault Tolerance Diagram](./images/FaultTolerance.png)
+![Fault Tolerance Diagram](images/FaultTolerance.png)
 
 Como representado no diagrama, o nosso sistema permite tolerar várias faltas.
+
 * **Faltas do cliente** - Não infuenciam o funcionamento das réplicas.
 
 * **Omissão de mensagens / Partição da rede** - Quando inicia, o cliente estabelece
@@ -65,19 +66,57 @@ foi tolerada.
 
 ## Protocolo de replicação
 
-_(Explicação do protocolo)_
+Para realizar a replicação de dados entre réplicas seguimos a seguinte variante do protocolo _Gossip_:
+Estruturas:
+  - _Record_: contém o pedido de update, opId único da operação, prevTS, updateTS, réplica e data-hora da primeira receção.
+  - _Log_: contém _records_ de camJoins e reports ainda não conhecidos por todas as réplicas.
 
-_(descrição das trocas de mensagens)_
-
+Envio:
+  - Quando um servidor é lançado inicia-se um temporizador, que cada _X_ tempo aciona a 
+  tarefa de replicação.
+  - Havendo mais que uma réplica disponível no registo de nomes é aleatoriamente selecionado 
+  uma réplica à qual se irá enviar uma mensagem _Gossip_.
+  - Define-se no envio da mensagem um tempo de timeout aleatório para prevenir que réplicas 
+  fiquem 'presas' por estarem simultaneamente a tentar enviar mensagem uma para a outra.
+  - Caso ocorra timeout no envio ou a réplica se encontre indisponível é escolhida outra 
+  réplica, uma vez que se tenha tentado enviar, sem sucesso, para todas as réplicas disponíveis 
+  a tarefa é abortada, sendo novamente iniciada no próximo evento do temporizador.
+  - Sendo bem-sucedido a réplica recetora recebe uma mensagem contendo:
+    - Número da réplica transmissora
+    - _replicaTS_
+    - _Records_ do _log_ que se presume não existirem na réplica recetora
+  
+Receção:
+  - A réplica recetora envia primeiro a resposta para que a transmissora receba o mais rapidamente 
+  possível a informação de sucesso, e procede ao tratamento a mensagem _Gossip_ recebida
+  - O vetor _replicaTS_ é atualizado com o _replicaTS_ recebido na mensagem
+  - A entrada da _tableTS_ referente à réplica transmissora é atualizada para guardar o _replicaTS_ recebido.
+  - Os _records_ recebidos são analisados para determinar se devem ser adicionados ao _log_:
+    - Se o estado/versão da réplica transmissora presente no record for superior ao conhecido 
+    então corresponde a um update ainda não conhecido.
+    - Se o _opId_ do update não for igual a nenhum _opId_ de um _record_ no _log_ então o pedido 
+    não é duplicado e o _record_ pode ser adicionado ao _log_.
+    - Se o duplicado for um _ReportRequest_ então a data-hora é unificada com a do pedido no _log_:
+      - Se o _report_ já tiver sido aplicado ao _value_ então as observações correspondestes são 
+      atualizadas para manter a data-hora menor.
+      - Se ainda não tiver sido aplicado basta atualizar a data-hora do _record_ presente no _log_.
+  - Aplica-se ao _value_ os _updates_ no _log_ que satisfazem a condição de estabilidade.
+  - Elimina-se os _records_ que já tenham sido aplicados ao _value_ e que já tenham sido 
+  transmitidos por _Gossip_ às restantes réplicas, nomeadamente se a versão da réplica 
+  transmissora do record presente no _updateTS_ deste for inferior ao valor guardado na _tableTS_.
 
 ## Opções de implementação
 
-Considerando que o gossip não pretende garantir a coerência do ponto de vista do cliente,
-decidimos que implementar um _histórico_ no mesmo seria uma solução eficaz. Desta forma, o 
-cliente, que passou também a guardar o _timestamp_ da última versão do servidor vista
-(_prevTS_), consegue escolher entre descartar ou não cada resposta do servidor aos seus
-pedidos de leitura. Basta verificar se _prevTS_ é superior ao _timestamp_ da resposta
+Por forma a garantir a coerência do ponto de vista do cliente, decidimos que implementar 
+um histórico de operações efetuadas no mesmo seria uma solução eficaz. Desta forma, o 
+cliente, que passou também a guardar o _timestamp_ da última versão do servidor vista 
+(_prevTS_), consegue escolher entre descartar ou não cada resposta do servidor aos seus 
+pedidos de leitura. Basta verificar se _prevTS_ é superior ao _timestamp_ da resposta 
 recebida.
+
+Decidimos não impôr um tamanho limite ao histórico de operações do cliente, pois assim
+poderia dar-se o caso de este se deparar com vistas incoerentes, o que iria contra um dos
+requisitos do enunciado.
 
 Considere-se, agora, a situação em que um cliente faz um report para a réplica _A_, que o 
 recebe. De seguida, _A_ atribui um _timestamp_ X às observações e envia uma ReportResponse 
