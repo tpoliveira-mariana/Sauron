@@ -39,7 +39,7 @@ Seja _f_ o número de faltas a tolerar, então são necessárias, no mínimo, _f
 
 ## Solução
 
-![Fault Tolerance Diagram](FaultTolerance.png)
+![Fault Tolerance Diagram](images/FaultTolerance.png)
 
 _(Breve explicação da solução, suportada pela figura anterior)_
 Aquando da sua criação, o SiloFrontend conecta-se a uma réplica (escolhida aleatoriamente,
@@ -49,10 +49,44 @@ tenta enviar um CamJoinReques à réplica 1, é lançada a exceção _UNAVAILABL
 
 ## Protocolo de replicação
 
-_(Explicação do protocolo)_
+Para realizar a replicação de dados entre réplicas seguimos a seguinte variante do protocolo _Gossip_:
+Estruturas:
+  - _Record_: contém o pedido de update, opId único da operação, prevTS, updateTS, réplica e data-hora da primeira receção.
+  - _Log_: contém _records_ de camJoins e reports ainda não conhecidos por todas as réplicas.
 
-_(descrição das trocas de mensagens)_
-
+Envio:
+  - Quando um servidor é lançado inicia-se um temporizador, que cada _X_ tempo aciona a 
+  tarefa de replicação.
+  - Havendo mais que uma réplica disponível no registo de nomes é aleatoriamente selecionado 
+  uma réplica à qual se irá enviar uma mensagem _Gossip_.
+  - Define-se no envio da mensagem um tempo de timeout aleatório para prevenir que réplicas 
+  fiquem 'presas' por estarem simultaneamente a tentar enviar mensagem uma para a outra.
+  - Caso ocorra timeout no envio ou a réplica se encontre indisponível é escolhida outra 
+  réplica, uma vez que se tenha tentado enviar, sem sucesso, para todas as réplicas disponíveis 
+  a tarefa é abortada, sendo novamente iniciada no próximo evento do temporizador.
+  - Sendo bem-sucedido a réplica recetora recebe uma mensagem contendo:
+    - Número da réplica transmissora
+    - _replicaTS_
+    - _Records_ do _log_ que se presume não existirem na réplica recetora
+  
+Receção:
+  - A réplica recetora envia primeiro a resposta para que a transmissora receba o mais rapidamente 
+  possível a informação de sucesso, e procede ao tratamento a mensagem _Gossip_ recebida
+  - O vetor _replicaTS_ é atualizado com o _replicaTS_ recebido na mensagem
+  - A entrada da _tableTS_ referente à réplica transmissora é atualizada para guardar o _replicaTS_ recebido.
+  - Os _records_ recebidos são analisados para determinar se devem ser adicionados ao _log_:
+    - Se o estado/versão da réplica transmissora presente no record for superior ao conhecido 
+    então corresponde a um update ainda não conhecido.
+    - Se o _opId_ do update não for igual a nenhum _opId_ de um _record_ no _log_ então o pedido 
+    não é duplicado e o _record_ pode ser adicionado ao _log_.
+    - Se o duplicado for um _ReportRequest_ então a data-hora é unificada com a do pedido no _log_:
+      - Se o _report_ já tiver sido aplicado ao _value_ então as observações correspondestes são 
+      atualizadas para manter a data-hora menor.
+      - Se ainda não tiver sido aplicado basta atualizar a data-hora do _record_ presente no _log_.
+  - Aplica-se ao _value_ os _updates_ no _log_ que satisfazem a condição de estabilidade.
+  - Elimina-se os _records_ que já tenham sido aplicados ao _value_ e que já tenham sido 
+  transmitidos por _Gossip_ às restantes réplicas, nomeadamente se a versão da réplica 
+  transmissora do record presente no _updateTS_ deste for inferior ao valor guardado na _tableTS_.
 
 ## Opções de implementação
 
