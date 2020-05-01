@@ -3,6 +3,7 @@ package pt.tecnico.sauron.silo.client;
 import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.tecnico.sauron.silo.grpc.CamInfoResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class CamJoinIT extends BaseIT{
@@ -56,14 +57,14 @@ public class CamJoinIT extends BaseIT{
 
     private void assertCamSaved(String name, double lat, double lon, boolean saved) {
         if (saved) {
-            double[] coords = Assertions.assertDoesNotThrow(() -> frontend.camInfo(name));
-            Assertions.assertEquals(lat, coords[0]);
-            Assertions.assertEquals(lon, coords[1]);
+            CamInfoResponse response = Assertions.assertDoesNotThrow(() -> frontend.camInfo(name));
+            Assertions.assertEquals(lat, response.getCoordinates().getLatitude());
+            Assertions.assertEquals(lon, response.getCoordinates().getLongitude());
         } else {
             try {
-                double[] coords = frontend.camInfo(name);
-                Assertions.assertNotEquals(lat, coords[0]);
-                Assertions.assertNotEquals(lon, coords[1]);
+                CamInfoResponse response = frontend.camInfo(name);
+                Assertions.assertNotEquals(lat, response.getCoordinates().getLatitude());
+                Assertions.assertNotEquals(lon, response.getCoordinates().getLongitude());
             } catch (SauronException e) {
                 Assertions.assertTrue(e.getErrorMessage() == ErrorMessage.CAMERA_NOT_FOUND
                         || e.getErrorMessage() == ErrorMessage.INVALID_CAM_NAME);

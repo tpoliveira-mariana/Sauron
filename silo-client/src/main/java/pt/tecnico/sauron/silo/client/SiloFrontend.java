@@ -19,6 +19,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public class SiloFrontend {
@@ -55,9 +57,19 @@ public class SiloFrontend {
 
     public void connect(int instance) throws ZKNamingException, SauronException {
         String path = SERVER_PATH + "/" + instance;
-        ZKRecord record;
+        ZKRecord record = null;
+        if (instance != -1) {
+            try {
+                display("Trying connection to instance: " + instance);
+                record = nameServer.lookup(path);
+                currentInstance = instance;
+            } catch (ZKNamingException e) {
+                display("Replica with path " + path + " not found in registry");
+                instance = -1;
+            }
+        }
         if (instance == -1) {
-            display("Choosing random replica to connect to...");
+            display("Choosing random replica...");
             List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
             if (replicas.isEmpty()) {
                 display("There are no available replicas. Failing...");
@@ -66,19 +78,13 @@ public class SiloFrontend {
             record = replicas.get((new Random()).nextInt(replicas.size()));
             path = record.getPath();
             currentInstance = Integer.parseInt(path.substring(path.lastIndexOf('/') + 1));
-        } else {
-            display("Trying connection to instance: " + instance);
-            record = nameServer.lookup(path);
-            currentInstance = instance;
         }
         try {
-            String target = record.getURI();
+            String target = record == null ? "" : record.getURI();
             _channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
             _stub = SauronGrpc.newBlockingStub(_channel);
-
             display("Connected to: " + path);
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             display("Couldn't build channel. Failing...");
             throw new SauronException(ErrorMessage.UNKNOWN);
         }
@@ -89,64 +95,27 @@ public class SiloFrontend {
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
-        boolean failed;
-        int instance = currentInstance;
         checkCamera(name, lat, lon);
         Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
-        CamJoinRequest request = CamJoinRequest.newBuilder().setName(name)
-                                                            .setCoordinates(coordinates)
-                                                            .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
-                                                            .setOpId(UUID.randomUUID().toString())
-                                                            .build();
-        do {
-            failed = false;
-            try {
-                display("Sending camJoin request...");
-                CamJoinResponse response = timedStub().camJoin(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                this.prevTS = mergeTS(this.prevTS, valueTS);
-                display("Updated prevTS to " + this.prevTS);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else throw properException(e);
-            }
-        } while (failed);
+        CamJoinRequest request = CamJoinRequest.newBuilder()
+                .setName(name)
+                .setCoordinates(coordinates)
+                .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+                .setOpId(UUID.randomUUID().toString())
+                .build();
 
+        doUpdate(req -> timedStub().camJoin(req), request, res -> res.getVector().getTsList());
     }
 
-    public double[] camInfo(String name) throws SauronException {
-        boolean failed;
-        int instance = currentInstance;
+    public CamInfoResponse camInfo(String name) throws SauronException {
         checkCameraName(name);
-        CamInfoResponse response = null;
         CamInfoRequest request = CamInfoRequest.newBuilder().setName(name).build();
 
-        do {
-            failed = false;
-            try {
-                display("Sending camInfo request...");
-                response = timedStub().camInfo(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                response = getConsistentResponse(response, valueTS, "camInfo"+name, CamInfoResponse.class);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else response = getConsistentError(e, "camInfo"+name, CamInfoResponse.class);
-            }
-        } while (failed);
-
-        return new double[]{response.getCoordinates().getLatitude(), response.getCoordinates().getLongitude()};
+        return doQuery(req -> timedStub().camInfo(req), request, "camInfo"+name, CamInfoResponse.class, res -> res.getVector().getTsList());
     }
 
     public void report(String name, List<List<String>> observations) throws SauronException {
         checkCameraName(name);
-        boolean failed;
-        int instance = currentInstance;
         boolean error = false;
         ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
 
@@ -154,121 +123,38 @@ public class SiloFrontend {
         for (List<String> observation : observations) {
             try {
                 checkObjectArguments(observation.get(0), observation.get(1), false);
-                builder.addObject(Object.newBuilder()
-                        .setType(stringToType(observation.get(0)))
-                        .setId(observation.get(1)).build());
+                builder.addObject(Object.newBuilder().setType(stringToType(observation.get(0))).setId(observation.get(1)).build());
             } catch (SauronException e) {
-                if (!error) {
-                    errorMessage = e.getErrorMessage();
-                }
+                if (!error) errorMessage = e.getErrorMessage();
                 error = true;
             }
         }
         ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
                 .setOpId(UUID.randomUUID().toString()).build();
 
-        do {
-            failed = false;
-            try {
-                display("Sending report request...");
-                ReportResponse response = timedStub().report(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                this.prevTS = mergeTS(this.prevTS, valueTS);
-                display("Updated prevTS to " + this.prevTS);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else throw properException(e);
-            }
-        } while (failed);
-
+        doUpdate(req -> timedStub().report(req), request, res -> res.getVector().getTsList());
         if (error) throw new SauronException(errorMessage);
     }
 
     public TrackResponse track(String type, String id) throws SauronException {
-        boolean failed;
-        int instance = currentInstance;
-        TrackResponse response = null;
         checkObjectArguments(type, id, false);
-        TrackRequest request = TrackRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
-        do {
-            failed = false;
-            try {
-                display("Sending track request...");
-                response = timedStub().track(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                response = getConsistentResponse(response, valueTS, "track"+type+id, TrackResponse.class);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else response = getConsistentError(e, "track"+type+id, TrackResponse.class);
-            }
-        } while (failed);
+        TrackRequest request = TrackRequest.newBuilder().setType(stringToType(type)).setId(id).build();
 
-        return response;
+        return doQuery(req -> timedStub().track(req), request, "track"+type+id, TrackResponse.class, res -> res.getVector().getTsList());
     }
 
     public TrackMatchResponse trackMatch(String type, String id) throws SauronException {
-        boolean failed;
-        int instance = currentInstance;
-        TrackMatchResponse response = null;
         checkObjectArguments(type, id, true);
-        TrackMatchRequest request = TrackMatchRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
-        do {
-            failed = false;
-            try {
-                display("Sending trackMatch request...");
-                response = timedStub().trackMatch(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                response = getConsistentResponse(response, valueTS, "trackMatch"+type+id, TrackMatchResponse.class);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else response = getConsistentError(e, "trackMatch"+type+id, TrackMatchResponse.class);
-            }
-        } while (failed);
+        TrackMatchRequest request = TrackMatchRequest.newBuilder().setType(stringToType(type)).setId(id).build();
 
-        return response;
+        return doQuery(req -> timedStub().trackMatch(req), request, "trackMatch"+type+id, TrackMatchResponse.class, res -> res.getVector().getTsList());
     }
 
     public TraceResponse trace(String type, String id) throws SauronException {
-        boolean failed;
-        int instance = currentInstance;
-        TraceResponse response = null;
         checkObjectArguments(type, id, false);
-        TraceRequest request = TraceRequest.newBuilder()
-                .setType(stringToType(type))
-                .setId(id)
-                .build();
-        do {
-            failed = false;
-            try {
-                display("Sending trackMatch request...");
-                response = timedStub().trace(request);
-                List<Integer> valueTS = response.getVector().getTsList();
-                display("Received response with TS: " + valueTS);
-                response = getConsistentResponse(response, valueTS, "trace"+type+id, TraceResponse.class);
-            } catch (StatusRuntimeException e) {
-                if (reconnectOnFail(e, instance)) {
-                    failed = true;
-                    instance = -1;
-                } else response = getConsistentError(e, "trace"+type+id, TraceResponse.class);
-            }
-        } while (failed);
+        TraceRequest request = TraceRequest.newBuilder().setType(stringToType(type)).setId(id).build();
 
-        return response;
+        return doQuery(req -> timedStub().trace(req), request, "trace"+type+id, TraceResponse.class, res -> res.getVector().getTsList());
     }
 
     public String ctrlPing(String input) throws SauronException {
@@ -348,6 +234,52 @@ public class SiloFrontend {
         }
     }
 
+    private <Q extends Message, S extends Message> S doQuery(Function<Q, S> command, Q request, String query, Class<S> responseClass, Function<S, List<Integer>> getter) throws SauronException {
+        boolean failed;
+        int instance = currentInstance;
+        S response = null;
+
+        do {
+            failed = false;
+            try {
+                display("Sending request...");
+                response = command.apply(request);
+                List<Integer> valueTS = getter.apply(response);
+                display("Received response with TS: " + valueTS);
+                response = getConsistentResponse(response, valueTS, query, responseClass);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else response = getConsistentError(e, query, responseClass);
+            }
+        } while (failed);
+
+        return response;
+    }
+
+    private <Q extends Message, S extends Message> void doUpdate(Function<Q, S> command, Q request, Function<S, List<Integer>> getter) throws SauronException {
+        boolean failed;
+        int instance = currentInstance;
+
+        do {
+            failed = false;
+            try {
+                display("Sending request...");
+                S response = command.apply(request);
+                List<Integer> valueTS = getter.apply(response);
+                display("Received response with TS: " + valueTS);
+                this.prevTS = mergeTS(this.prevTS, valueTS);
+                display("Updated prevTS to " + this.prevTS);
+            } catch (StatusRuntimeException e) {
+                if (reconnectOnFail(e, instance)) {
+                    failed = true;
+                    instance = -1;
+                } else throw properException(e);
+            }
+        } while (failed);
+    }
+
     private SauronException properException(StatusRuntimeException e) {
         return reactToStatus(e.getStatus().getDescription());
     }
@@ -359,7 +291,8 @@ public class SiloFrontend {
                 display("Failed to connect to replica: " + code.toString());
                 if (replicaNum > 1) {
                     _channel.shutdown();
-                    display("Choosing another replica to connect to...");
+                    if (instance == -1) display("Choosing another replica to connect to...");
+                    else display("Retrying connection to instance " + instance + "...");
                     connect(instance);
                 }
                 return true;
@@ -455,8 +388,8 @@ public class SiloFrontend {
             if (id.length() != 6)
                 throw new SauronException(ErrorMessage.INVALID_CAR_ID);
             for (int i = 0; i <3; i++) {
-                char firstChar = id.charAt(2 * i);
-                char secChar = id.charAt(2 * i + 1);
+                char firstChar = id.charAt(2*i);
+                char secChar = id.charAt(2*i + 1);
                 if (Character.isDigit(firstChar) && Character.isDigit(secChar))
                     numFields++;
                 else if (!(Character.isUpperCase(firstChar) && Character.isUpperCase(secChar)))

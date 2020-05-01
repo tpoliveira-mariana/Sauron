@@ -3,6 +3,7 @@ package pt.tecnico.sauron.silo.client;
 import org.junit.jupiter.api.*;
 import pt.tecnico.sauron.exceptions.ErrorMessage;
 import pt.tecnico.sauron.exceptions.SauronException;
+import pt.tecnico.sauron.silo.grpc.CamInfoResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class CamInfoIT extends BaseIT{
@@ -54,9 +55,9 @@ public class CamInfoIT extends BaseIT{
         oneTimeCleanUp();
         Assertions.assertDoesNotThrow(() -> frontend.camJoin(NAME_ALAMEDA, LAT_ALAMEDA, LON_ALAMEDA));
 
-        double[] coords = Assertions.assertDoesNotThrow(() -> frontend.camInfo(NAME_ALAMEDA));
-        Assertions.assertEquals(LAT_ALAMEDA, coords[0]);
-        Assertions.assertEquals(LON_ALAMEDA, coords[1]);
+        CamInfoResponse response = Assertions.assertDoesNotThrow(() -> frontend.camInfo(NAME_ALAMEDA));
+        Assertions.assertEquals(LAT_ALAMEDA, response.getCoordinates().getLatitude());
+        Assertions.assertEquals(LON_ALAMEDA, response.getCoordinates().getLongitude());
 
         oneTimeCleanUp();
     }
