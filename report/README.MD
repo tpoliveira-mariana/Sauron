@@ -48,10 +48,10 @@ Como representado no diagrama, o nosso sistema permite tolerar várias faltas.
 * **Faltas do cliente** - Não infuenciam o funcionamento das réplicas.
 
 * **Omissão de mensagens / Partição da rede** - Quando inicia, o cliente estabelece
-uma coneção com uma réplica (neste exemplo, a 1). Depois de tal facto, 1 _crasha_.
+uma conexão com uma réplica (neste exemplo, a 1). Depois de tal facto, 1 _crasha_.
 O cliente executa um _camJoin()_, que resulta no envio de um _CamJoinRequest_ à réplica 1.
 No entanto, como esta não está ativa, é lançada uma exceção (_UNAVAILABLE_). O cliente
-volta a conectar-se com 1, que ainda está registada no servidor de nomes, e reenvia o
+volta a conectar-se a 1, que ainda está registada no servidor de nomes, e reenvia o
 pedido, voltanto a ser lançada a mesma exceção. Depois desta segunda tentativa, o 
 cliente conecta-se à réplica 2 (escolhida aleatoriamente) e, mais uma vez, envia o 
 _CamJoinRequest_. Dada a perda da _CamJoinResponse_, um _timeout_ no cliente faz com que 
@@ -60,7 +60,7 @@ Desta vez o cliente recebe a resposta, a falta foi tolerada.
 
 * **_Crash_ de réplicas sem perda de informação** - Considerando que a réplica 1 não
 perdeu a informação que tinha antes de ter _crashado_, então, quando volta a ficar ativa,
-eventualmente, recebe _gossip_ e outras réplicas, o que lhe permite atualizar-se. A falta
+eventualmente, recebe _gossip_ de outras réplicas, o que lhe permite atualizar-se. A falta
 foi tolerada.
 
 ## Protocolo de replicação
@@ -116,7 +116,7 @@ forma A fica na mesma versão que B.
 As mensagens do gRPC têm limite de tamanho, logo, se a informação de uma réplica ocupar 
 memória superior a este valor (o que é bastante provável) o envio falha. Assim, pode dar-se
 o caso de pedidos de _cam_join_ que as outras réplicas já tenham retirado dos seus _logs_
-não serjam partilhados com A. Desta forma, todos os _reports_ feitos por essa camera que
+não sejam partilhados com A. Desta forma, todos os _reports_ feitos por essa camera que
 cheguem a A vão acumular-se no _log_. Este acumular de pedidos acabará provocar um novo 
 _crash_ de A por falta de memória. É um ciclo vicioso.
 
