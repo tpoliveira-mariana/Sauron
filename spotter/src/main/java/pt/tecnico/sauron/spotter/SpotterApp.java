@@ -38,7 +38,7 @@ public class SpotterApp {
 		} catch (NumberFormatException e) {
 			display("Invalid number provided.");
 		} catch (ZKNamingException e){
-			display("Zookeper could not start.");
+			display("ZooKeeper could not start.");
 		} catch (SauronException e) {
 			display("No Silo replicas found.");
 		}
@@ -68,6 +68,9 @@ public class SpotterApp {
 					case "init":
 						initCommand(arguments);
 						break;
+					case "info":
+						infoCommand(arguments);
+						break;
 					case "exit":
 						if (arguments.length != 1) {
 							displayCommandUsage("exit");
@@ -90,6 +93,21 @@ public class SpotterApp {
 				System.out.flush();
 			}
 		}
+	}
+
+	private static void infoCommand(String[] arguments) {
+		if (arguments.length != 2) {
+			display("Invalid usage of info - Invalid number of arguments!");
+			displayCommandUsage("info");
+			return;
+		}
+		try {
+			CamInfoResponse response = _frontend.camInfo(arguments[1]);
+			display(arguments[1] + "," + response.getCoordinates().getLatitude() + "," + response.getCoordinates().getLongitude());
+		} catch(SauronException e) {
+			display("Invalid usage of info - " + reactToException(e));
+		}
+
 	}
 
 	private static void spotCommand(String[] arguments) {
@@ -181,6 +199,8 @@ public class SpotterApp {
 
 	private static void displayHelp() {
 		display("\t\t-=+=-");
+		display("info  - gets the info for the camera with name [camName]");
+		display("\tUsage: info [camName]");
 		display("spot  - gets the last observation of the object of type [type] and id [id]");
 		display("      - id can contain * meaning any match, for example 1*2 means any number starting with 1 and ending with 2");
 		display("\tUsage: spot [ObjectType] [ObjectId]");
@@ -239,6 +259,10 @@ public class SpotterApp {
 
 	private static String reactToException(SauronException e) {
 		switch(e.getErrorMessage()) {
+			case INVALID_CAM_NAME:
+				return "Invalid camera name";
+			case CAMERA_NOT_FOUND:
+				return "Non existing camera";
 			case OBJECT_NOT_FOUND:
 				return "No ID matches the one given!";
 			case INVALID_PERSON_ID:
@@ -260,6 +284,9 @@ public class SpotterApp {
 
 	private static void displayCommandUsage(String command) {
 		switch (command){
+			case "info":
+				display("Usage: info [camName]");
+				break;
 			case "spot":
 				display("Usage: spot [ObjectType] [ObjectId]");
 				break;

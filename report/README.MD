@@ -25,27 +25,44 @@ Sistemas Distribuídos 2019-2020, segundo semestre
 
 ## Modelo de faltas
 Considerem-se os pressupostos do enunciado.
-Seja _f_ o número de faltas a tolerar, então são necessárias, no mínimo, _f + 1_ réplicas. 
+Seja _f_ o número de faltas a tolerar, então são necessárias, no mínimo, _f + 1_ réplicas.
+Desde que haja uma réplica funcional, o cliente consegue sempre ligar-se a ela e enviar
+os seus pedido. 
 
 ##### Faltas toleradas:
-* Falta do cliente;
-* Omissão de mensagens por parte dos canais de comunicação;
-* _Crash_ que não leve a perda de informação (ctrl + z, por exemplo); 
-* Partições da rede.
+1. Falta do cliente;
+2. Omissão de mensagens por parte dos canais de comunicação;
+3. Partições da rede;
+4. _Crash_ que não leve a perda de informação (ctrl + z, por exemplo); 
+
 
 ##### Faltas não toleradas:
-* _Crash_ de réplicas que leve à perda da sua informação;
-* Falta do Zookeeper.
+1. _Crash_ de réplicas que leve à perda da sua informação;
+3. Falta do Zookeeper.
 
 ## Solução
 
 ![Fault Tolerance Diagram](images/FaultTolerance.png)
 
-_(Breve explicação da solução, suportada pela figura anterior)_
-Aquando da sua criação, o SiloFrontend conecta-se a uma réplica (escolhida aleatoriamente,
-ou pelo cliente). Depois de estabelecida a conecção, a réplica 1 _crasha_. Assim, quando 
-tenta enviar um CamJoinReques à réplica 1, é lançada a exceção _UNAVAILABLE_. O cliente 
+Como representado no diagrama, o nosso sistema permite tolerar várias faltas.
 
+* **Faltas do cliente** - Não infuenciam o funcionamento das réplicas.
+
+* **Omissão de mensagens / Partição da rede** - Quando inicia, o cliente estabelece
+uma conexão com uma réplica (neste exemplo, a 1). Depois de tal facto, 1 _crasha_.
+O cliente executa um _camJoin()_, que resulta no envio de um _CamJoinRequest_ à réplica 1.
+No entanto, como esta não está ativa, é lançada uma exceção (_UNAVAILABLE_). O cliente
+volta a conectar-se a 1, que ainda está registada no servidor de nomes, e reenvia o
+pedido, voltanto a ser lançada a mesma exceção. Depois desta segunda tentativa, o 
+cliente conecta-se à réplica 2 (escolhida aleatoriamente) e, mais uma vez, envia o 
+_CamJoinRequest_. Dada a perda da _CamJoinResponse_, um _timeout_ no cliente faz com que 
+o cliente se reconecte a uma réplica escolhida aleatoriamente e reenvie o pedido. 
+Desta vez o cliente recebe a resposta, a falta foi tolerada.
+
+* **_Crash_ de réplicas sem perda de informação** - Considerando que a réplica 1 não
+perdeu a informação que tinha antes de ter _crashado_, então, quando volta a ficar ativa,
+eventualmente, recebe _gossip_ de outras réplicas, o que lhe permite atualizar-se. A falta
+foi tolerada.
 
 ## Protocolo de replicação
 
@@ -90,8 +107,6 @@ Receção:
 
 ## Opções de implementação
 
-_(Descrição de opções de implementação, incluindo otimizações e melhorias introduzidas)_
-
 Considerando que o gossip não pretende garantir a coerência do ponto de vista do cliente,
 decidimos que implementar uma _cache_ no mesmo seria uma solução eficaz. Desta forma, o 
 cliente, que passou também a guardar o _timestamp_ da última versão do servidor vista
@@ -99,7 +114,19 @@ cliente, que passou também a guardar o _timestamp_ da última versão do servid
 pedidos de leitura. Basta verificar se _prevTS_ é superior ao _timestamp_ da resposta
 recebida.
 
-#### QUEREMOS POR AQUI A CENA DOS UUID?
+Considere-se, agora, a situação em que um cliente faz um report para a réplica _A_, que o 
+recebe. De seguida, _A_ atribui um _timestamp_ X às observações e envia uma ReportResponse 
+ao cliente. Se esta resposta não chegar ao cliente (ou chegar, mas só depois de ter
+ocorrido um timeout), o cliente reenvia o pedido para _A_. Desta vez, o pedido perde-se
+na rede, pelo que volta a ocorrer um _timeout_ no cliente. Depois deste segundo _timeout_
+o cliente envia o mesmo pedido para a réplica _B_. _B_ recebe-o, atribui um
+_timestamp_ Y às observações e envia a resposta para o cliente, que a recebe.
+
+Da situação anteriormente descrita resulta que duas réplica diferentes guardem uma mesma
+observação com _timestamps_ diferentes. Para evitar esta situação de incoerência, decidimos
+atribuir um _id_ único a cada operação de update. Desta forma, quando, pelo gossip, uma
+réplica receber um mesmo _report_ com observações que tenham _timestamp_ diferente do
+seu, atualiza-o por forma a ficar com o mais antigo.
 
 
 ## Notas finais
@@ -124,7 +151,7 @@ forma A fica na mesma versão que B.
 As mensagens do gRPC têm limite de tamanho, logo, se a informação de uma réplica ocupar 
 memória superior a este valor (o que é bastante provável) o envio falha. Assim, pode dar-se
 o caso de pedidos de _cam_join_ que as outras réplicas já tenham retirado dos seus _logs_
-não serjam partilhados com A. Desta forma, todos os _reports_ feitos por essa camera que
+não sejam partilhados com A. Desta forma, todos os _reports_ feitos por essa camera que
 cheguem a A vão acumular-se no _log_. Este acumular de pedidos acabará provocar um novo 
 _crash_ de A por falta de memória. É um ciclo vicioso.
 

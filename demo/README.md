@@ -1,218 +1,206 @@
-### Sauron Usage Guide
+# Sauron - Guião de demonstração
 
-Before executing any of the commands bellow you should have already followed the instructions in the README.md of the root directory
+## 1. Preparação do Sistema
 
-#### Launch ServerApp
-```
-$ cd silo-server
-$ mvn compile exec:java -Dexec.args="[port]"
-```
-To launch server on port `[port]`.
-If you choose to not include `-Dexec.args="[port]"`, the server will run on port 8080 by default.
+Para poder testar a aplicação *silo* e os clientes *eye* e *spotter*, 
+é necessário inicialmente preparar um ambiente com dados.
 
-With the server running, any of the following clients can be concurrently launched in a separate terminal,
- for example by pressing `ctrl-shift-t`, and proceed as follows:
+### 1.1 Compilar o Projeto
 
----
-
-#### Launch EyeApp
-```
-$ cd ../eye
-$ mvn compile exec:java -Dexec.args="[host] [port] [camera name] [latitude] [longitude]"
-```
-For example, to launch the EyeApp and connect it to the server on localhost:8080 using a camera named Tagus, 
-located at (38.737613 -9.403164) use:
+Para compilar o projeto é necessário instalar as dependências para o *silo* e os clientes(*eye* e *spotter*) e compilar estes componentes.
+Para isso, basta ir à diretoria root do projeto e correr o comando:
 
 ```
-$ cd ../eye
-$ mvn compile exec:java -Dexec.args="localhost 8080 Tagus 38.737613 -9.403164"
-```
-After launching EyeApp you can submit observations as follows: 
-You can add an observation as follows:
-```
-[type],[ID]
-```
-##### **Type and ID rules:**    
-    
-The type must be either `car` or `person`. 
-- Car
-
-    1. ID is its license plate number which must have 6 characters
-    2. The ID must have 3 subgroups of 2 characters each
-    3. Each subgroup can only be of capital letters or numbers
-    4. There cannot be 3 subgroups of letters or numbers simultaneously
-    
-- Person
-    1. ID must be a positive integer
-    
-Each observation, as well as each new command of the following, must be in a new line. 
-
-##### **Comments:** 
-Comment lines, which will be ignored, start with `#`.
-
-##### **Sleep:** 
-
-You can also make the Eye sleep for a certain amount of time by typing `zzz,[milliseconds]` between observations.
-
-##### **Submission:** 
-When a blank line is detected, the observations above it will be submitted. 
-Another way of submitting them is by closing the standard input.
-
-##### **Input redirection:** 
-If you want, you may redirect the input from a file of your choice:
-
-```
-$ cd ../eye
-$ mvn compile exec:java -Dexec.args="localhost 8080 Tagus 38.737613 -9.403164" < ../demo/testEye_1.txt
-```
-For testing purposes, you can run multiple scenarios using the different `testEye_X.txt` files.
-
----
-
-#### Launch SpotterApp
-
-```
-$ cd ../spotter
-$ mvn compile exec:java -Dexec.args="[host] [port]"
+$ mvn install -DskipTests
 ```
 
-For example, to launch the SpotterApp and connect it to the server on localhost:8080
+### 1.2 Servidor de Nomes
+
+Antes de poder executar quer o servidor, quer qualquer um dos clientes é necessário  instalar o módulo [ZooKeeper](https://zookeeper.apache.org/releases.html#download).
+
+Após ter instalado este módulo é necessário iniciar um servidor de nomes.
+Para isso, basta ir à diretoria `/bin` dentro da diretoria de instalação do módulo e correr o seguinte comando:
 
 ```
-$ cd ../spotter
-$ mvn compile exec:java -Dexec.args="localhost 8080"
+$ ./zkServer.sh start
 ```
 
-After launching the spotter app the following commands are available to you:
+### 1.2. *Silo*
 
-- #####Init Command
-
-    ```
-    init [file]
-    ```
-
-    The init command is a control command that receives a file containing cameras and observations to load the server with.
-    
-    For example, to use the file spotterInit.txt write,
-    
-    ```
-    init ../demo/spotterInit.txt
-    ```
-  
-    Note: To create your own server init file read the sub-section below `Creating your own init file`.
-- #####Clear Command
-    ```
-    clear
-    ```
-
-    The clear command is a control command that clears all the server data. This command takes no arguments.
-
-- #####Ping Command
-
-    ```
-    ping
-    ```
-    
-    The ping command is a control command that pings the server. 
-    Its only usage is for you to check if the spotter is correctly connected to the server.
-    
-    The app sends `spotter` as message, to which the server should reply with `Hello spotter!`, meaning everything is working fine.
-
-- #####Spot Command
-
-    ```
-    spot [type] [ID]
-    ```
-    
-    The spot command is a command that allows you to search for the last observation registered on the object of the type and ID given.
-    
-    There are some rules for the type and ID (see the previous subsection `Type and ID rules` in the `Launch EyeApp` section).
-        
-    For example, to search for the car with ID `AABB33` use:
-    
-    ```
-    spot car AABB33
-    ```
-  
-    The special character `* ` can be specified in the ID, in which case it will return the last observation recorded on every object of the type given which ID matches the partial ID given.
-    
-    For example to search for every person whose id starts with `1` and ends with `1` use:
-    ```
-    spot person 1*1
-    ```
-    
-    The output of this command comes in the form of:
-    
-    ```
-    [type],[ID],[observation date],[camera name],[camera latitude],[camera longitude]
-    ```
-  
-- #####Trail Command
-
-    ```
-    trail [type] [ID]
-    ```
-  
-    The trail command is a command that allows you to search for every observation registered on the object of the type and ID given.
-    
-    The output comes in the same format as the command before.
-    
-    The same rules to ID as before apply to this command (see the previous subsection `Type and ID rules` in the `Launch EyeApp` section).
-    
-    Note: This command needs the exact ID, therefore the ID cannot contain the `*` character. 
-    
-    
-- #####Help Command
-    
-    To see all of the supported commands, their description and usage, type:
-    
-    ```
-    help
-    ```
-
-
-    
-##### **Creating your own server init file:**
-
-To create your own init file:
-- To create a camera write
-    ```
-    cam,[camera name],[camera latitude],[camera longitude]
-    ```
-- To create an observation write
-    ```
-    [type],[ID]
-    ```
-- Each observation must have a camera declared in the lines before it
-- Each observation will be linked to the last created camera on the lines prior
-- Each one of the former commands must be written in a new line
-- When you are done type `done` in a new line
-
----
-
-#### Launch ClientApp
-```
-$ cd ../silo-client
-$ mvn compile exec:java -Dexec.args="[host] [port]"
-```
-The SiloClientApp's single function is to ping the server.
-The app sends `SiloClientApp` as message, to which the server should reply with `Hello SiloClientApp!`.
-
-For example, to launch the SiloClientApp on localhost:8080 use:
+Para proceder aos testes, é preciso pelo menos uma instância(réplica) *silo* estar a correr.
+Sempre que for necessário executar uma réplica será indicado o comando respetivo.
+Para executar um réplica com os parâmetros default basta ir à diretoria *silo-server* e executar:
 
 ```
-$ cd ../silo-client
-$ mvn compile exec:java -Dexec.args="localhost 8080"
+$ mvn exec:java
 ```
 
----
+Por definição, este comando irá criar a instância *silo* número 1 que irá correr no endereço *localhost* e na porta *8081* e que se irá registar
+no servidor de nomes a correr em `localhost` na porta `2181`.
 
-#### Run Automatic Tests 
+### 1.3. *Eye*
 
-In order for you to run the automatic tests you must:
-1. Launch ServerApp in one terminal
-2. Open a different terminal tab by pressing `ctrl-shift-t`
-3. Go to project's root directory: `$ cd ../`
-4. And then run one of the two following commands:
- `$ mvn install`  `$ mvn verify`
+Sempre que for necessário criar um cliente *eye* tal será indicado. 
+Para criar um ciente *eye* basta ir à diretoria *eye* e correr o seguinte comando:
+
+```
+$ eye localhost 2181 Alameda 30.303164 -10.737613
+```
+
+Este comando irá criar uma câmera que irá utilizar o servidor de nomes que se encontra no endereço *locahost* e na porta *2181* para localizar as réplicas a contactar.
+
+A câmera tem o nome dado pelo terceiro argumento e as suas coordenadas dadas pelo quarto e quinto argumentos.
+
+**Nota:** Para correr o script *eye* é necessário fazer `mvn install` e adicionar ao *PATH* ou utilizar diretamente os executáveis gerados na diretoria `target/appassembler/bin/`.
+
+### 1.3. *Spotter*
+
+Alguns dos comandos são exclusivos do client *spotter*, por isso, é necessário executar um cliente *spotter*.
+Para isso basta ir à diretoria *spotter* e correr o seguinte commando:
+
+```
+$ spotter localhost 2181
+```
+
+**Nota:** Para correr o script *spotter* é necessário fazer `mvn install` e adicionar ao *PATH* ou utilizar diretamente os executáveis gerados na diretoria `target/appassembler/bin/`.
+
+Com as instruções acima é possível correr qualquer tipo de instrução suportada pela aplicação.
+De seguida demonstram-se algumas situações de replicação e de tolerância a faltas.  
+
+
+## 2. Replicação e Tolerância a Faltas
+
+Nesta secção vamos efetuar os procedimentos de forma a exemplificar os mecanismos de replicação, coerência no cliente e de tolerância a faltas da aplicação. 
+Cada subsecção é respetiva a uma situação possível de acontecer durante a execução da aplicação *silo*.
+
+### 2.1. Replicação e Coerência no Cliente
+
+Nesta subsecção iremos apresentar exemplos do mecanismo de replicação e de coerência no cliente em atuação.
+
+Para tal, inicialmente, na diretoria `silo-server`, lançamos a primeira réplica(1) que irá correr  no endereço `localhost` e na porta `8081`.
+
+O parâmetro `replicaNum` indica o número máximo de réplicas diferentes que estarão ativas para comunicação durante a execução.
+
+O parâmetro `gossipTimer` indica o número de segundos entre cada ronda de partilha de mensagens entre réplicas
+
+```
+mvn exec:java -DreplicaNum=2 -DgosspiTimer=15
+```
+
+De seguida lançamos um cliente *eye* e enviamos as observações presentes no ficheiro fornecido à réplica 1.
+Para isso corremos o seguinte comando na diretoria `eye`:
+
+```
+$ eye localhost 2181 Alameda 30.303164 -10.737613 < replication_test.txt
+```
+
+De seguida, verificamos se as observações forem bem submetidas na réplica 1.
+Para isso, lançamos um cliente spotter, estando na diretoria `spotter` através do comando:
+
+A opção `instance` indica preferência de conexão do cliente à réplica dada, neste caso 1
+
+```
+$ mvn exec:java -Dinstance=1
+```
+
+No cliente spotter executamos o comando:
+
+```
+-> spot person 1*
+```
+
+Ao que, se tudo tiver sido submetido corretamente, o servidor deve responder com:
+
+```
+person,1,[timestamp],Alameda,30.303164,-10.737613
+person,15,[timestamp],Alameda,30.303164,-10.737613
+person,17,[timestamp],Alameda,30.303164,-10.737613
+```
+
+De seguida, colocamos a execução da réplica 1 em suspenso utilizando as teclas `CTRL` + `Z`.
+Lançamos uma segunda réplica(2) com o comando seguinte na diretoria `silo-server`:
+
+```
+mvn exec:java -Dinstance=2 -DreplicaNum=2
+```
+
+Esta réplica irá correr no endereço `localhost` e na porta `8082`
+
+Posteriormente, verificamos que esta réplica se encontra limpa ao lançarmos um novo cliente *spotter* que se ligue a esta réplica, com o comando:
+
+```
+$ mvn exec:java -Dinstance=2
+```
+
+Neste cliente executamos novamente o comando:
+
+```
+-> spot person 1*
+```
+
+A resposta esperada deve ser:
+
+```
+Invalid usage of spot - No ID matches the one given!
+```
+
+No cliente *spotter* que ligámos à réplica 1 executamos o mesmo comando.
+
+Como a réplica 1 está indisponível este imprimirá eventualmente a mensagem abaixo que indica que se conectou à réplica 2:
+
+```
+Choosing another replica to connect to...
+Choosing random replica...
+Connected to: /grpc/sauron/silo/2
+```
+
+Posteriormente será recebida a resposta da réplica 2 e a resposta esperada é a mesma que a obtida da réplica 1.
+
+Esta resposta ilustra a coerência do ponto de vista das leituras do cliente, uma vez que este não imprime a resposta obtida pelo *spotter* anterior.
+
+De seguida, ativamos novamente a réplica 1 com o comando:
+
+```
+fg
+```
+
+Esperamos até obtermos nesta réplica a seguinte mensagem, que indica que a réplica 1 trocou os seus pedidos com a réplica 2:
+
+```
+Replica 1 initiating gossip...
+Connecting to replica 2 at localhost:8082...
+Gossip to replica 2 successful, exiting gossip
+```
+
+Novamente no cliente *spotter* que ligámos à réplica 2 efetuamos o comando:
+
+```
+-> spot person 1*
+```
+
+A resposta esperada desta vez deverá ser:
+
+```
+person,1,[timestamp],Alameda,30.303164,-10.737613
+person,15,[timestamp],Alameda,30.303164,-10.737613
+person,17,[timestamp],Alameda,30.303164,-10.737613
+```
+
+### 2.2. Tolerância a Faltas
+
+
+## 3. Correr Testes Automáticos
+
+Para correr os testes automáticos é necessário primeiro lançar uma réplica com o comando seguinte na diretoria `silo-server`:
+
+```
+mvn exec:java
+```
+
+De seguida para executar os testes basta correr o seguinte comando na diretoria `silo-client`:
+
+```
+mvn verify
+```
+
 
