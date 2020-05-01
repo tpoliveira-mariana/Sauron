@@ -73,7 +73,7 @@ _(descrição das trocas de mensagens)_
 ## Opções de implementação
 
 Considerando que o gossip não pretende garantir a coerência do ponto de vista do cliente,
-decidimos que implementar uma _cache_ no mesmo seria uma solução eficaz. Desta forma, o 
+decidimos que implementar um _histórico_ no mesmo seria uma solução eficaz. Desta forma, o 
 cliente, que passou também a guardar o _timestamp_ da última versão do servidor vista
 (_prevTS_), consegue escolher entre descartar ou não cada resposta do servidor aos seus
 pedidos de leitura. Basta verificar se _prevTS_ é superior ao _timestamp_ da resposta
@@ -103,9 +103,9 @@ em funcionamento, até ao momento em que a réplica A _crasha_.
 **Solução 1:**
 
 Quando A volta a ficar disponível, eventualmente, recebe gossip de outras réplicas. 
-Quando tal acontece, comparando o seu _replicaTS_ com o _updateTS_ do gossip recebido,
-apercebe-se que perdeu informação (a sua entrada do _replicaTS_ vai ter um valor inferior 
-ao presente na entrada respetiva do _replicaTS_).
+Quando tal acontece, comparando a sua entrada no seu _replicaTS_ com a sua entrada no replicaTS
+do gossip recebido, apercebe-se que perdeu informação (a sua entrada do _replicaTS_ vai ter um 
+valor inferior ao presente na entrada respetiva do _replicaTS_ recebido).
 Apercebendo-se de que perdeu informação, A pede a uma das outras réplicas que lhe envie os
 seus mapas (com o registo das cameras e das observações). Supondo que B recebe este 
 pedido, B envia a A uma mensagem gRPC com **todos os mapas e a sua versão atual**. Desta
