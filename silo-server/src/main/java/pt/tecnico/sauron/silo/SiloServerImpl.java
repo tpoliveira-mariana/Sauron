@@ -141,7 +141,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
-        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
+        List<Integer> updateID = handleWriteRequest(Any.pack(request.getCam()), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
         //debug-System.out.println(updateID);
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
 
@@ -168,7 +168,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     @Override
     public synchronized void report(ReportRequest request, StreamObserver<ReportResponse> responseObserver) {
-        List<Integer> updateID = handleWriteRequest(Any.pack(request), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
+        List<Integer> updateID = handleWriteRequest(Any.pack(request.getReport()), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
 
         ReportResponse response = ReportResponse.newBuilder().setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
         responseObserver.onNext(response);
@@ -270,7 +270,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
         int senderInstance = request.getInstance();
         List<Integer> newTS = request.getReplicaTS().getTsList();
-        List<Request> requests = request.getLogRecordList();
+        List<RecordMessage> requests = request.getLogRecordList();
 
         handleNewRequests(requests);
         this.replicaTS = mergeTS(this.replicaTS, newTS);
@@ -448,10 +448,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         this.opIds.put(opId, record);
         if (tsAfter(valueTS, prevTS)) {
             try {
-                if (request.is(CamJoinRequest.class))
-                    handleCamJoin(request.unpack(CamJoinRequest.class));
+                if (request.is(Cam.class))
+                    handleCamJoin(request.unpack(Cam.class));
                 else
-                    handleReport(request.unpack(ReportRequest.class), record.getTimestamp());
+                    handleReport(request.unpack(Report.class), record.getTimestamp());
                 record.setApplied(true);
                 this.valueTS = mergeTS(this.valueTS, updateID);
             } catch (InvalidProtocolBufferException e) {
@@ -526,7 +526,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     private GossipRequest getGossipRequest(int newInstance){
         GossipRequest.Builder gossipReq = GossipRequest.newBuilder().setInstance(this.instance);
-        List<Request> sendRecords = new ArrayList<>();
+        List<RecordMessage> sendRecords = new ArrayList<>();
         if (updateLog.isEmpty()) {
             gossipReq.setReplicaTS(VectorTS.newBuilder().addAllTs(replicaTS).build()).addAllLogRecord(sendRecords);
         }
@@ -542,7 +542,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 } catch (ParseException e) {
                     ts = Timestamp.getDefaultInstance();
                 }
-                Request req = Request.newBuilder()
+                RecordMessage req = RecordMessage.newBuilder()
                         .setRequest(record.getRequest())
                         .setInstance(requestInst)
                         .setUpdateTS(updateTS).setPrevTS(prevTS)
@@ -569,10 +569,10 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             } else {
                 Any request = record.getRequest();
                 try {
-                    if (request.is(CamJoinRequest.class))
-                        handleCamJoin(request.unpack(CamJoinRequest.class));
+                    if (request.is(Cam.class))
+                        handleCamJoin(request.unpack(Cam.class));
                     else
-                        handleReport(request.unpack(ReportRequest.class), record.getTimestamp());
+                        handleReport(request.unpack(Report.class), record.getTimestamp());
                     record.setApplied(true);
                     this.valueTS = mergeTS(valueTS, record.getUpdateTS());
                     i = checkRecordRemoval(record, i) ? i - 1 : i;
@@ -594,14 +594,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return true;
     }
 
-    private void handleCamJoin(CamJoinRequest request){
+    private void handleCamJoin(Cam request){
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
         } catch (SauronException ignore) {}
     }
 
-    private void handleReport(ReportRequest request, String ts){
+    private void handleReport(Report request, String ts){
         SauronCamera cam;
         try {
             cam = silo.getCamByName(request.getName());
@@ -623,7 +623,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
-    private void handleNewRequests(List<Request> requests) {
+    private void handleNewRequests(List<RecordMessage> requests) {
         display("Received " + requests.size() + " new requests. Handling them...");
         if (requests.isEmpty())
             return;
@@ -652,12 +652,12 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private void enforceReportConsistency(Record current, Record duplicate) {
-        if (!current.getRequest().is(ReportRequest.class) || !duplicate.getRequest().is(ReportRequest.class))
+        if (!current.getRequest().is(Report.class) || !duplicate.getRequest().is(Report.class))
             return;
         if (ZonedDateTime.parse(duplicate.getTimestamp()).isAfter(ZonedDateTime.parse(current.getTimestamp())))
             return;
         try {
-            ReportRequest request = current.getRequest().unpack(ReportRequest.class);
+            Report request = current.getRequest().unpack(Report.class);
             if (current.isApplied()) {
                 for (Object obj : request.getObjectList()) {
                     SauronCamera sauCam = silo.getCamByName(request.getName());

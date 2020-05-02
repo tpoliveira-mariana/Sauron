@@ -39,11 +39,11 @@ message Observation {
 }
 
 
+
 message CamJoinRequest {
-    string name = 1;
-    Coordinates coordinates = 2;
-    VectorTS vector = 3;
-    string opId = 4;
+    Cam cam = 1;
+    VectorTS vector = 2;
+    string opId = 3;
 }
 
 message CamJoinResponse {
@@ -59,11 +59,15 @@ message CamInfoResponse {
     VectorTS vector = 2;
 }
 
-message ReportRequest {
+message Report {
     string name = 1;
     repeated Object object = 2;
-    VectorTS vector = 3;
-    string opId = 4;
+}
+
+message ReportRequest {
+    Report report = 1;
+    VectorTS vector = 2;
+    string opId = 3;
 }
 
 message ReportResponse {
@@ -112,7 +116,7 @@ message ClearRequest {}
 
 message ClearResponse {}
 
-message Request{
+message RecordMessage {
     google.protobuf.Any request = 1;
     VectorTS prevTS = 2;
     VectorTS updateTS = 3;
@@ -122,7 +126,7 @@ message Request{
 }
 
 message GossipRequest {
-    repeated Request logRecord = 1;
+    repeated RecordMessage logRecord = 1;
     VectorTS replicaTS = 2;
     int32 instance = 3;
 }

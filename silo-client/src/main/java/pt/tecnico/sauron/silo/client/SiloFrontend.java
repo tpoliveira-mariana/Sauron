@@ -101,8 +101,7 @@ public class SiloFrontend {
         checkCamera(name, lat, lon);
         Coordinates coordinates = Coordinates.newBuilder().setLatitude(lat).setLongitude(lon).build();
         CamJoinRequest request = CamJoinRequest.newBuilder()
-                .setName(name)
-                .setCoordinates(coordinates)
+                .setCam(Cam.newBuilder().setName(name).setCoordinates(coordinates).build())
                 .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
                 .setOpId(UUID.randomUUID().toString())
                 .build();
@@ -119,24 +118,24 @@ public class SiloFrontend {
 
     public void report(String name, List<List<String>> observations) throws SauronException {
         checkCameraName(name);
-        boolean error = false;
-        ErrorMessage errorMessage = ErrorMessage.UNKNOWN;
+        ErrorMessage errorMessage = null;
 
-        ReportRequest.Builder builder = ReportRequest.newBuilder().setName(name);
+        Report.Builder builder = Report.newBuilder().setName(name);
         for (List<String> observation : observations) {
             try {
                 checkObjectArguments(observation.get(0), observation.get(1), false);
                 builder.addObject(Object.newBuilder().setType(stringToType(observation.get(0))).setId(observation.get(1)).build());
             } catch (SauronException e) {
-                if (!error) errorMessage = e.getErrorMessage();
-                error = true;
+                if (errorMessage == null) errorMessage = e.getErrorMessage();
             }
         }
-        ReportRequest request = builder.setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
+        ReportRequest request = ReportRequest.newBuilder()
+                .setReport(builder.build())
+                .setVector(VectorTS.newBuilder().addAllTs(this.prevTS).build())
                 .setOpId(UUID.randomUUID().toString()).build();
 
         doUpdate(req -> timedStub().report(req), request, res -> res.getVector().getTsList());
-        if (error) throw new SauronException(errorMessage);
+        if (errorMessage != null) throw new SauronException(errorMessage);
     }
 
     public TrackResponse track(String type, String id) throws SauronException {
