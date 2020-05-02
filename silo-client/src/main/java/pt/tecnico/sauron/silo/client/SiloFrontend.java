@@ -43,6 +43,9 @@ public class SiloFrontend {
     private int currentInstance;
 
     private static final int STUB_TIMEOUT = 5000;
+    private static final int STUB_TIMEOUT_DEMO1 = 10;
+    private boolean demo1 = false;
+    private int timeout = STUB_TIMEOUT;
 
     private Map<String, Any> responses = new HashMap<>();
 
@@ -90,7 +93,7 @@ public class SiloFrontend {
     }
 
     private SauronGrpc.SauronBlockingStub timedStub() {
-        return _stub.withDeadlineAfter(STUB_TIMEOUT, TimeUnit.MILLISECONDS);
+        return _stub.withDeadlineAfter(timeout, TimeUnit.MILLISECONDS);
     }
 
     public void camJoin(String name, double lat, double lon) throws SauronException {
@@ -252,7 +255,6 @@ public class SiloFrontend {
                 } else response = getConsistentError(e, query, responseClass);
             }
         } while (failed);
-
         return response;
     }
 
@@ -270,12 +272,21 @@ public class SiloFrontend {
                 this.prevTS = mergeTS(this.prevTS, valueTS);
                 display("Updated prevTS to " + this.prevTS);
             } catch (StatusRuntimeException e) {
+                if (demo1) {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (java.lang.InterruptedException error) {return;}
+                    timeout = STUB_TIMEOUT;
+                    instance = 2;
+                }
                 if (reconnectOnFail(e, instance)) {
                     failed = true;
                     instance = -1;
                 } else throw properException(e);
             }
         } while (failed);
+        if (demo1)
+            timeout = STUB_TIMEOUT_DEMO1;
     }
 
     private SauronException properException(StatusRuntimeException e) {
@@ -458,5 +469,10 @@ public class SiloFrontend {
 
     private static void display(String msg) {
         System.out.println(msg);
+    }
+
+    public void setDemo1(boolean state){
+        this.demo1 = state;
+        this.timeout = state ? STUB_TIMEOUT_DEMO1 : STUB_TIMEOUT;
     }
 }

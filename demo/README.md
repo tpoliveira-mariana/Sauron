@@ -439,6 +439,99 @@ person,17,[timestamp],Alameda,30.303164,-10.737613
 
 ### 3.2. Tolerância a Faltas
 
+#### 3.2.2 Omissão de mensagens por parte dos canais de comunicação
+
+Antes de executar as seguintes instruções, é importante ressalvar que as mesmas requerem uma elevada destreza e rapidez de movimentos,
+para que o efeito pretendido seja observado
+
+Inicialmente, é necessário lançar duas réplicas.
+
+Para lançar a réplica 1 executar:
+
+```
+$ mvn clean compile exec:java -DreplicaNum=2 -DgossipTimer=15
+```
+
+Para lançar a réplica 2 executar:
+
+```
+$ mvn clean compile exec:java -Dinstance=2 -DreplicaNum=2
+```
+
+De seguida, é necessário lançar um cliente eye, para tal correr o comando:
+
+```
+$ eye localhost 2181 Alameda 30.303164 -10.737613 1
+```
+
+Mal o cliente *eye* peça input inserir o comando seguinte que permite entrar num modo de execução especial de demonstração:
+
+```
+demo1
+```
+
+Posteriormente, inserir a observação seguinte:
+
+```
+person,1
+```
+
+Nesta etapa seguinte, é precisa bastante destreza.
+
+Observar a réplica 1 e assim que apareça a mensagem seguinte pressionar *enter* no cliente *eye para submeter a observação
+e passados 2 segundos efetuar `CTRL` + `Z`na réplica 1 para a suspender.
+
+```
+Replica 1 initiating gossip...
+Connecting to replica 2 at localhost:8082...
+```
+
+Lançar um cliente spotter que se conecte à réplica 2, com o seguinte comando:
+
+```
+$ spotter localhost 2181 2
+```
+
+No *spotter* executar o comando seguinte:
+```
+-> spot person 1
+```
+
+O comando devolverá:
+
+```
+person,1,[timestamp1],Alameda,30.303164,-10.737613
+```
+
+De seguida, efetuar `CTRL`+ `Z` na réplica 2 para a suspender e efetuar `fg` na réplica 1.
+Lançar um novo spotter que se ligue à réplica 1 com o seguinte comando:
+
+```
+$ spotter localhost 2181 1
+```
+
+No *spotter* executar o comando seguinte:
+```
+-> spot person 1
+```
+
+O comando devolverá:
+
+```
+person,1,[timestamp2],Alameda,30.303164,-10.737613
+```
+
+Reparar que o timestamp2 é cerca de 2 segundos mais recente que o timestamp 1. Se isso se verificar então o processo foi bem sucedido
+e é possível prosseguir.
+
+De seguida, efetuar o comando `fg` na réplica 1 e quando for vista a mensagem seguinte na  réplica 2, efetuar novamente o comando `spot` no
+*spotter* ligado à réplica 2
+
+```
+Received 1 new requests. Handling them...
+```
+
+Desta vez a resposta obtida do comando spot deverá conter o timestamp2 (mais antigo) ao invés do timestamp1
 
 ## 4. Correr Testes Automáticos
 

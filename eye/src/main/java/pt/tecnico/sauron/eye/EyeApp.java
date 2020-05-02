@@ -62,13 +62,18 @@ public class EyeApp {
 				return ;
 			}
 		}
-
+		boolean demo1 = false;
 		try {
 			Scanner scanner = new Scanner(System.in);
 			List<List<String>> observations = new ArrayList<>();
 
 			while (scanner.hasNextLine()) {
 				String line = scanner.nextLine();
+				if (line.equals("demo1")) {
+					demo1 = !demo1;
+					_frontend.setDemo1(demo1);
+					continue;
+				}
 				if (!handledSpecialLine(cameraName, line, observations)) {
 					StringTokenizer st = new StringTokenizer(line, ",");
 					if (st.countTokens() != 2) {

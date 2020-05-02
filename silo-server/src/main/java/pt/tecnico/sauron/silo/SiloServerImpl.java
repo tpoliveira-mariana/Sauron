@@ -475,8 +475,9 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
 
                 GossipRequest request = getGossipRequest(replicaNum);
+
                 display("Connecting to replica " + replicaNum + " at " + target + "...");
-                stub.withDeadlineAfter((long)(Math.random() + 1.5) * STUB_TIMEOUT, TimeUnit.MILLISECONDS).gossip(request);
+                stub.withDeadlineAfter((long)(Math.random() + 1) * STUB_TIMEOUT, TimeUnit.MILLISECONDS).gossip(request);
 
                 channel.shutdown();
                 display("Gossip to replica " + replicaNum + " successful, exiting gossip");
