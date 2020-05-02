@@ -355,8 +355,6 @@ $ eye localhost 2181 Alameda 30.303164 -10.737613 2 1 < replication.txt
 De seguida, verificamos se as observações forem bem submetidas na réplica 1.
 Para isso, lançamos um cliente spotter através do comando:
 
-A opção `instance` indica preferência de conexão do cliente à réplica dada, neste caso 1
-
 ```
 $ spotter localhost 2181 2 1
 ```
