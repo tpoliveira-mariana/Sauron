@@ -100,7 +100,7 @@ $ eye localhost 2181 ab 10.0 10.0
 $ eye localhost 2181 abcdefghijklmnop 10.0 10.0
 ```
 
-Deve ser obtida a seguinte resposta
+Deve ser obtida em ambas as interações a seguinte resposta:
 ```
 Invalid camera name provided.
 ```
@@ -110,7 +110,13 @@ Invalid camera name provided.
 Esta operação já foi testada no comando anterior ao popular a réplica.
 
 No entanto falta testar o sucesso do comando *zzz*. 
-Para testar basta abrir um cliente *spotter* e correr o comando seguinte:
+Para testar basta abrir um cliente *spotter*:
+ 
+```
+$ spotter localhost 2181
+```
+
+Correr o comando seguinte:
 
 ```
 -> trail person 1
@@ -191,7 +197,7 @@ person,15,[timestamp],Alameda,30.303164,-10.737613
 Deverá devolver:
 
 ```
-car,[timestamp],Alameda,30.303164,-10.737613
+car,11AA22,[timestamp],Alameda,30.303164,-10.737613
 ```
 
 ### 2.5. *trackMatch*
@@ -219,7 +225,7 @@ Invalid usage of spot - No ID matches the one given!
 Deverá devolver:
 
 ```
-person,[timestamp],Alameda,30.303164,-10.737613
+person,23,[timestamp],Alameda,30.303164,-10.737613
 ```
 
 2.5.3. Teste com quatro pessoas:
@@ -242,7 +248,6 @@ person,19,[timestamp],Lisboa,32.737613,-15.303164
 
 ```
 -> spot car 11AA*
-car,00AA00,<timestamp>,Tagus,38.737613,-9.303164
 ```
 
 Deverá devolver:
@@ -271,7 +276,7 @@ Esta operação vai ser testada utilizando o comando *trail* com um identificado
 2.6.1. Teste com uma pessoa inexistente:
 
 ```
-> trail person 9
+-> trail person 9
 ```
 
 Deverá devolver:
@@ -326,6 +331,8 @@ Cada subsecção é respetiva a uma situação possível de acontecer durante a 
 
 ### 3.1. Replicação e Coerência no Cliente
 
+Fechar qualquer servidor ou cliente que estejam a correr.
+
 Nesta subsecção iremos apresentar exemplos do mecanismo de replicação e de coerência no cliente em atuação.
 
 Para tal, inicialmente, na diretoria `silo-server`, lançamos a primeira réplica(1) que irá correr  no endereço `localhost` e na porta `8081`.
@@ -335,23 +342,23 @@ O parâmetro `replicaNum` indica o número máximo de réplicas diferentes que e
 O parâmetro `gossipTimer` indica o número de segundos entre cada ronda de partilha de mensagens entre réplicas
 
 ```
-mvn exec:java -DreplicaNum=2 -DgosspiTimer=15
+$ mvn exec:java -DreplicaNum=2 -DgosspiTimer=15
 ```
 
 De seguida lançamos um cliente *eye* e enviamos as observações presentes no ficheiro fornecido à réplica 1.
 Para isso corremos o seguinte comando na diretoria `eye`:
 
 ```
-$ eye localhost 2181 Alameda 30.303164 -10.737613 < replication_test.txt
+$ eye localhost 2181 Alameda 30.303164 -10.737613 2 1 < replication.txt
 ```
 
 De seguida, verificamos se as observações forem bem submetidas na réplica 1.
-Para isso, lançamos um cliente spotter, estando na diretoria `spotter` através do comando:
+Para isso, lançamos um cliente spotter através do comando:
 
 A opção `instance` indica preferência de conexão do cliente à réplica dada, neste caso 1
 
 ```
-$ mvn exec:java -Dinstance=1
+$ spotter localhost 2181 2 1
 ```
 
 No cliente spotter executamos o comando:
@@ -372,7 +379,7 @@ De seguida, colocamos a execução da réplica 1 em suspenso utilizando as tecla
 Lançamos uma segunda réplica(2) com o comando seguinte na diretoria `silo-server`:
 
 ```
-mvn exec:java -Dinstance=2 -DreplicaNum=2
+$ mvn exec:java -Dinstance=2 -DreplicaNum=2
 ```
 
 Esta réplica irá correr no endereço `localhost` e na porta `8082`
@@ -380,7 +387,7 @@ Esta réplica irá correr no endereço `localhost` e na porta `8082`
 Posteriormente, verificamos que esta réplica se encontra limpa ao lançarmos um novo cliente *spotter* que se ligue a esta réplica, com o comando:
 
 ```
-$ mvn exec:java -Dinstance=2
+$ spotter localhost 2181 2 2
 ```
 
 Neste cliente executamos novamente o comando:
@@ -389,7 +396,7 @@ Neste cliente executamos novamente o comando:
 -> spot person 1*
 ```
 
-A resposta esperada deve ser:
+A resposta esperada deve ser, eventualmente:
 
 ```
 Invalid usage of spot - No ID matches the one given!
@@ -407,7 +414,8 @@ Connected to: /grpc/sauron/silo/2
 
 Posteriormente será recebida a resposta da réplica 2 e a resposta esperada é a mesma que a obtida da réplica 1.
 
-Esta resposta ilustra a coerência do ponto de vista das leituras do cliente, uma vez que este não imprime a resposta obtida pelo *spotter* anterior.
+Esta resposta ilustra a coerência do ponto de vista das leituras do cliente, uma vez que este não imprime a resposta obtida pelo *spotter* anterior,
+mas sim a que já tinha obtido da interação com a réplica 1.
 
 De seguida, ativamos novamente a réplica 1 com o comando:
 
@@ -437,9 +445,89 @@ person,15,[timestamp],Alameda,30.303164,-10.737613
 person,17,[timestamp],Alameda,30.303164,-10.737613
 ```
 
+Fechar as duas réplicas e os três clientes abertos.
+
 ### 3.2. Tolerância a Faltas
 
-#### 3.2.2 Omissão de mensagens por parte dos canais de comunicação
+#### 3.2.1 Crash que não leve à perda de informação/Partição de Rede
+
+Nesta subsecção iremos demonstrar tanto um crash silencioso que não leve à perda de informação, como uma partição de rede,
+suspendendo uma das réplicas como simulação de impossibilidade de comunicação entre réplicas.
+
+Inicialmente, é necessário lançar duas réplicas.
+
+Para lançar a réplica 1 executar:
+
+```
+$ mvn exec:java -DreplicaNum=2 -DgossipTimer=15
+```
+
+De seguida, é necessário lançar um cliente eye, para tal correr o comando:
+
+```
+$ eye localhost 2181 Alameda 30.303164 -10.737613 2 1
+```
+
+Posteriormente, inserir a observação seguinte:
+
+```
+person,1
+```
+
+Pressionar `enter` para submeter a observação
+
+De seguida lançar um cliente spotter que se conecte à réplica 1 com o seguinte comando
+
+```
+$ spotter localhost 2181 2 1
+```
+
+Neste *spotter* inserir o comando:
+```
+-> spot person 1
+```
+
+Deverá ser obtido, eventualmente:
+```
+person,1,[timestamp],Alameda,30.303164,-10.737613
+```
+
+Depois, na réplica 1  executar `CTRL` + `Z` e lançar uma segunda réplica com o comando:
+
+```
+$ mvn exec:java -Dinstance=2 -DreplicaNum=2
+```
+
+Lançar um cliente spotter que se conecte à réplica 2 com o comando:
+
+```
+$ spotter localhost 2181 2 2
+```
+
+Executar o mesmo comando *spot*, mas agora neste *spotter*, deve ser obtido:
+
+```
+Invalid usage of spot - No ID matches the one given!
+```
+
+Efetuar o comando `fg` na réplica 1 e esperar até que seja obtida a seguinte mensagem na réplica 1:
+
+```
+Replica 1 initiating gossip...
+Connecting to replica 2 at localhost:8082...
+Gossip to replica 2 successful, exiting gossip
+```
+
+De seguida efetuar novamente `CTRL` + `Z`na réplica 1 e efetuar de novo o comando `spot` no segundo `spotter` criado.
+Deverá ser obtido:
+
+```
+person,1,[timestamp],Alameda,30.303164,-10.737613
+```
+
+Executar `fg` na réplica 1 e fechar as réplicas e os clientes
+
+#### 3.2.2 Omissão de mensagens por parte dos canais de comunicação e Falta do cliente
 
 Antes de executar as seguintes instruções, é importante ressalvar que as mesmas requerem uma elevada destreza e rapidez de movimentos,
 para que o efeito pretendido seja observado
@@ -449,7 +537,7 @@ Inicialmente, é necessário lançar duas réplicas.
 Para lançar a réplica 1 executar:
 
 ```
-$ mvn clean compile exec:java -DreplicaNum=2 -DgossipTimer=15
+$ mvn exec:java -DreplicaNum=2 -DgossipTimer=15
 ```
 
 Para lançar a réplica 2 executar:
@@ -461,7 +549,7 @@ $ mvn clean compile exec:java -Dinstance=2 -DreplicaNum=2
 De seguida, é necessário lançar um cliente eye, para tal correr o comando:
 
 ```
-$ eye localhost 2181 Alameda 30.303164 -10.737613 1
+$ eye localhost 2181 Alameda 30.303164 -10.737613 2 1
 ```
 
 Mal o cliente *eye* peça input inserir o comando seguinte que permite entrar num modo de execução especial de demonstração:
@@ -470,7 +558,7 @@ Mal o cliente *eye* peça input inserir o comando seguinte que permite entrar nu
 demo1
 ```
 
-Posteriormente, inserir a observação seguinte:
+Posteriormente, inserir a observação seguinte(sem submeter):
 
 ```
 person,1
@@ -478,8 +566,8 @@ person,1
 
 Nesta etapa seguinte, é precisa bastante destreza.
 
-Observar a réplica 1 e assim que apareça a mensagem seguinte pressionar *enter* no cliente *eye para submeter a observação
-e passados 2 segundos efetuar `CTRL` + `Z`na réplica 1 para a suspender.
+Observar a réplica 1 e assim que apareça a mensagem abaixo e depois pressionar `enter` no cliente *eye* para submeter a observação
+e efetuar `CTRL` + `Z`na réplica 1 para a suspender.
 
 ```
 Replica 1 initiating gossip...
@@ -489,7 +577,7 @@ Connecting to replica 2 at localhost:8082...
 Lançar um cliente spotter que se conecte à réplica 2, com o seguinte comando:
 
 ```
-$ spotter localhost 2181 2
+$ spotter localhost 2181 2 2
 ```
 
 No *spotter* executar o comando seguinte:
@@ -507,7 +595,7 @@ De seguida, efetuar `CTRL`+ `Z` na réplica 2 para a suspender e efetuar `fg` na
 Lançar um novo spotter que se ligue à réplica 1 com o seguinte comando:
 
 ```
-$ spotter localhost 2181 1
+$ spotter localhost 2181 2 1
 ```
 
 No *spotter* executar o comando seguinte:
@@ -515,16 +603,20 @@ No *spotter* executar o comando seguinte:
 -> spot person 1
 ```
 
-O comando devolverá:
+O comando devolverá, eventualmente:
 
 ```
 person,1,[timestamp2],Alameda,30.303164,-10.737613
 ```
 
-Reparar que o timestamp2 é cerca de 2 segundos mais recente que o timestamp 1. Se isso se verificar então o processo foi bem sucedido
+Reparar que o timestamp2 é diferente, sendo alguns segundos mais recente que o timestamp 1. Se isso se verificar então o processo foi bem sucedido
 e é possível prosseguir.
 
-De seguida, efetuar o comando `fg` na réplica 1 e quando for vista a mensagem seguinte na  réplica 2, efetuar novamente o comando `spot` no
+A partir desta interação é possível também exemplificar a tolerância a faltas no cliente, uma vez que a réplica 1 recebeu o pedido do cliente *eye*, 
+apesar de da parte do cliente este não ter recebido a resposta, porque o pedido excedeu o tempo limite, que foi proposidamente
+modificado para ser muito curto(modo *demo1*).
+
+De seguida, efetuar o comando `fg` na réplica 2 e quando for vista a mensagem seguinte na  réplica 2, efetuar novamente o comando `spot` no
 *spotter* ligado à réplica 2
 
 ```
@@ -532,6 +624,8 @@ Received 1 new requests. Handling them...
 ```
 
 Desta vez a resposta obtida do comando spot deverá conter o timestamp2 (mais antigo) ao invés do timestamp1
+
+Fechar todas as réplicas e clientes abertos.
 
 ## 4. Correr Testes Automáticos
 
@@ -546,7 +640,3 @@ De seguida para executar os testes basta correr o seguinte comando na diretoria 
 ```
 mvn verify
 ```
-
-## 5. Notas Finais
-
-

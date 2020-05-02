@@ -49,10 +49,10 @@ public class SiloFrontend {
 
     private Map<String, Any> responses = new HashMap<>();
 
-    public SiloFrontend(String zooHost, String zooPort, int instance) throws ZKNamingException, SauronException {
+    public SiloFrontend(String zooHost, String zooPort, int instance, int replicasNum) throws ZKNamingException, SauronException {
         nameServer = new ZKNaming(zooHost,zooPort);
         List<ZKRecord> replicas = new ArrayList<>(nameServer.listRecords(SERVER_PATH));
-        replicaNum = replicas.size();
+        replicaNum = replicasNum;
         prevTS = new ArrayList<>(Collections.nCopies(replicaNum, 0));
         connect(instance);
     }

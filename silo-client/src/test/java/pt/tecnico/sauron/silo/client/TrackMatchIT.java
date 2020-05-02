@@ -50,7 +50,7 @@ public class TrackMatchIT extends BaseIT{
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
         try {
-            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, 1);
+            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, 1, 1);
             frontend.ctrlClear();
             frontend.ctrlInit(TEST_DATA_FILE);
         }

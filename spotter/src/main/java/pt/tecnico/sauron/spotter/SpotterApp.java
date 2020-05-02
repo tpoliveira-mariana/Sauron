@@ -26,14 +26,15 @@ public class SpotterApp {
 			display("arg[" + i + "] = " + args[i]);
 		}
 
-		if (args.length > 3 || args.length < 2) {
+		if (args.length > 4 || args.length < 2) {
 			display("Invalid Number of arguments!");
-			display("Usage: java " + SpotterApp.class.getSimpleName() + " zkhost zkport [replicaInstance]");
+			display("Usage: java " + SpotterApp.class.getSimpleName() + " zkhost zkport [replicaNum] [replicaInstance]");
 			return;
 		}
 		try {
-			int instance = (args.length == 3 && args[2] != null ? Integer.parseInt(args[2]) : -1);
-			_frontend = new SiloFrontend(args[0], args[1], instance);
+			int replicaNum = args.length >= 3  && args[2] != null ? Integer.parseInt(args[2]) : 1;
+			int instance = (args.length == 4 && args[3] != null ? Integer.parseInt(args[3]) : -1);
+			_frontend = new SiloFrontend(args[0], args[1], instance, replicaNum);
 			waitInput();
 		} catch (NumberFormatException e) {
 			display("Invalid number provided.");
