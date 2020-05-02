@@ -508,6 +508,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         for (Record record : updateLog){
             List<Integer> currentTS = record.getUpdateTS();
             int requestInst = record.getHandlerInstance();
+            // check if the other replica already has update
             if (currentTS.get(requestInst-1) > tableTS.get(newInstance-1).get(requestInst-1)) {
                 VectorTS updateTS = VectorTS.newBuilder().addAllTs(currentTS).build();
                 VectorTS prevTS = VectorTS.newBuilder().addAllTs(record.getPrevTS()).build();
@@ -531,6 +532,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         return gossipReq.build();
     }
 
+    // everytime gossip is received, need to see if any update can be applied
     private void checkLog(){
         if (updateLog.isEmpty()) return;
 
@@ -549,6 +551,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         }
     }
 
+    // update valueTS after applying an update requestfrom the log
     private void applyToValue(Record record) {
         Any request = record.getRequest();
         try {
@@ -562,6 +565,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
     }
 
+    // removes record from log if it has been sent to every other replica
     private boolean checkRecordRemoval(Record record, int index){
         List<Integer> updateTS = record.getUpdateTS();
         int recordInst = record.getHandlerInstance();
@@ -628,6 +632,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
     }
 
+    // make observation's timestamps consistent
     private void enforceReportConsistency(Record current, Record duplicate) {
         if (!current.getRequest().is(Report.class) || !duplicate.getRequest().is(Report.class))
             return;
