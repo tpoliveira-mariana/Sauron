@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static io.grpc.Status.*;
-import static org.apache.commons.lang.math.RandomUtils.nextInt;
 
 
 public class SiloServerImpl extends SauronGrpc.SauronImplBase {
@@ -142,7 +141,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     @Override
     public synchronized void camJoin(CamJoinRequest request, StreamObserver<CamJoinResponse> responseObserver) {
         List<Integer> updateID = handleWriteRequest(Any.pack(request.getCam()), request.getVector().getTsList(), UUID.fromString(request.getOpId()));
-        //debug-System.out.println(updateID);
         CamJoinResponse.Builder builder = CamJoinResponse.newBuilder();
 
         CamJoinResponse response = builder.setVector(VectorTS.newBuilder().addAllTs(updateID).build()).build();
@@ -276,7 +274,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         this.replicaTS = mergeTS(this.replicaTS, newTS);
         tableTS.set(senderInstance-1, newTS);
         checkLog();
-        //debug-System.out.println("log after check log - " + updateLog);
     }
 
     private Observation buildObs(SauronObservation sauObs) {
@@ -328,44 +325,34 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     private <T> void reactToException(SauronException e, StreamObserver<T> so) {
         switch(e.getErrorMessage()) {
             case DUPLICATE_CAMERA:
-                so.onError(ALREADY_EXISTS
-                        .withDescription("DUPLICATE_CAMERA").asRuntimeException());
+                so.onError(ALREADY_EXISTS.withDescription("DUPLICATE_CAMERA").asRuntimeException());
                 break;
             case DUPLICATE_CAM_NAME:
-                so.onError(ALREADY_EXISTS
-                        .withDescription("DUPLICATE_CAM_NAME").asRuntimeException());
+                so.onError(ALREADY_EXISTS.withDescription("DUPLICATE_CAM_NAME").asRuntimeException());
                 break;
             case INVALID_COORDINATES:
-                so.onError(INVALID_ARGUMENT
-                        .withDescription("INVALID_COORDINATES").asRuntimeException());
+                so.onError(INVALID_ARGUMENT.withDescription("INVALID_COORDINATES").asRuntimeException());
                 break;
             case INVALID_CAM_NAME:
-                so.onError(INVALID_ARGUMENT
-                        .withDescription("INVALID_CAM_NAME").asRuntimeException());
+                so.onError(INVALID_ARGUMENT.withDescription("INVALID_CAM_NAME").asRuntimeException());
                 break;
             case INVALID_PERSON_ID:
-                so.onError(INVALID_ARGUMENT
-                        .withDescription("INVALID_PERSON_ID").asRuntimeException());
+                so.onError(INVALID_ARGUMENT.withDescription("INVALID_PERSON_ID").asRuntimeException());
                 break;
             case INVALID_CAR_ID:
-                so.onError(INVALID_ARGUMENT
-                        .withDescription("INVALID_CAR_ID").asRuntimeException());
+                so.onError(INVALID_ARGUMENT.withDescription("INVALID_CAR_ID").asRuntimeException());
                 break;
             case OBJECT_NOT_FOUND:
-                so.onError(NOT_FOUND
-                        .withDescription("OBJECT_NOT_FOUND").asRuntimeException());
+                so.onError(NOT_FOUND.withDescription("OBJECT_NOT_FOUND").asRuntimeException());
                 break;
             case TYPE_DOES_NOT_EXIST:
-                so.onError(NOT_FOUND
-                        .withDescription("TYPE_DOES_NOT_EXIST").asRuntimeException());
+                so.onError(NOT_FOUND.withDescription("TYPE_DOES_NOT_EXIST").asRuntimeException());
                 break;
             case CAMERA_NOT_FOUND:
-                so.onError(NOT_FOUND
-                        .withDescription("CAMERA_NOT_FOUND").asRuntimeException());
+                so.onError(NOT_FOUND.withDescription("CAMERA_NOT_FOUND").asRuntimeException());
                 break;
             default:
-                so.onError(UNKNOWN
-                        .withDescription("UNKNOWN").asRuntimeException());
+                so.onError(UNKNOWN.withDescription("UNKNOWN").asRuntimeException());
         }
     }
 
@@ -428,7 +415,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private List<Integer> handleWriteRequest(Any request, List<Integer> prevTS, UUID opId) {
-
         // check if request is duplicated
         if (opIds.containsKey(opId))
             return prevTS;
@@ -438,8 +424,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         this.replicaTS.set(i, this.replicaTS.get(i) + 1);
 
         // build updateID to return
-        List<Integer> updateID = new ArrayList<>();
-        updateID.addAll(prevTS);
+        List<Integer> updateID = new ArrayList<>(prevTS);
         updateID.set(i, this.replicaTS.get(i));
 
         // add request to log
@@ -447,23 +432,13 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         this.updateLog.add(record);
         this.opIds.put(opId, record);
         if (tsAfter(valueTS, prevTS)) {
-            try {
-                if (request.is(Cam.class))
-                    handleCamJoin(request.unpack(Cam.class));
-                else
-                    handleReport(request.unpack(Report.class), record.getTimestamp());
-                record.setApplied(true);
-                this.valueTS = mergeTS(this.valueTS, updateID);
-            } catch (InvalidProtocolBufferException e) {
-                //Couldn't unpack try later
-            }
+            applyToValue(record);
         }
         return updateID;
     }
 
     public synchronized void performGossip(String serverPath){
         List<ZKRecord> replicas;
-        //debug-System.out.println("Gossip round! Log:" + this.updateLog);
         display("Replica " + instance + " initiating gossip...");
 
         try {
@@ -500,9 +475,8 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
                 SauronGrpc.SauronBlockingStub stub = SauronGrpc.newBlockingStub(channel);
 
                 GossipRequest request = getGossipRequest(replicaNum);
-                display("Connecting to replica " + replicaNum + " at " + target +
-                        "...");
-                stub.withDeadlineAfter((int)(Math.random() + 1.5) * STUB_TIMEOUT, TimeUnit.MILLISECONDS).gossip(request);
+                display("Connecting to replica " + replicaNum + " at " + target + "...");
+                stub.withDeadlineAfter((long)(Math.random() + 1.5) * STUB_TIMEOUT, TimeUnit.MILLISECONDS).gossip(request);
 
                 channel.shutdown();
                 display("Gossip to replica " + replicaNum + " successful, exiting gossip");
@@ -557,28 +531,34 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
     }
 
     private void checkLog(){
-        if (updateLog.isEmpty())
-            return;
-        for (int i=0; i < updateLog.size(); i++) {
+        if (updateLog.isEmpty()) return;
+
+        int i = 0;
+        while (i < updateLog.size()) {
             Record record = updateLog.get(i);
-            //debug-System.out.println("valueTS: " + valueTS + " prevTS: " + record.getPrevTS());
-            if (record.isApplied()) {
-                i = checkRecordRemoval(record, i) ? i-1 : i;
-            } else if (tsCompare(valueTS, record.getPrevTS()) == -1) {
+            if (record.isApplied() && !checkRecordRemoval(record, i))
+                i++;
+            else if (tsCompare(valueTS, record.getPrevTS()) == -1)
                 break;
-            } else {
-                Any request = record.getRequest();
-                try {
-                    if (request.is(Cam.class))
-                        handleCamJoin(request.unpack(Cam.class));
-                    else
-                        handleReport(request.unpack(Report.class), record.getTimestamp());
-                    record.setApplied(true);
-                    this.valueTS = mergeTS(valueTS, record.getUpdateTS());
-                    i = checkRecordRemoval(record, i) ? i - 1 : i;
-                } catch (InvalidProtocolBufferException ignored) {}
+            else {
+                applyToValue(record);
+                if (!checkRecordRemoval(record, i))
+                    i++;
             }
         }
+    }
+
+    private void applyToValue(Record record) {
+        Any request = record.getRequest();
+        try {
+            if (request.is(Cam.class))
+                handleCamJoin(request.unpack(Cam.class));
+            else
+                handleReport(request.unpack(Report.class), record.getTimestamp());
+            record.setApplied(true);
+            this.valueTS = mergeTS(this.valueTS, record.getUpdateTS());
+        } catch (InvalidProtocolBufferException e) { /*ignore*/ }
+
     }
 
     private boolean checkRecordRemoval(Record record, int index){
@@ -598,7 +578,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         try {
             SauronCamera newCam = new SauronCamera(request.getName(), request.getCoordinates().getLatitude(), request.getCoordinates().getLongitude());
             silo.addCamera(newCam);
-        } catch (SauronException ignore) {}
+        } catch (SauronException e) { /*ignore*/ }
     }
 
     private void handleReport(Report request, String ts){
@@ -619,7 +599,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
 
                 SauronObservation observation = new SauronObservation(sauObj, cam, ts);
                 silo.addObservation(observation);
-            } catch (SauronException ignore) {}
+            } catch (SauronException e) { /*ignore*/ }
         }
     }
 
@@ -631,10 +611,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         requests.forEach(request -> {
             List<Integer> reqTS = request.getUpdateTS().getTsList();
             int requestInst = request.getInstance();
-            //debug-System.out.println("updateTS - " + reqTS);
-            //debug-System.out.println("replicaTS - " + this.replicaTS);
             if (reqTS.get(requestInst-1) > replicaTS.get(requestInst-1)){
-                //debug-System.out.println("Added to log - " + Timestamps.toString(request.getTimestamp()));
                 //check if replicaTS is outdated in relation to updateTS
                 UUID opId = UUID.fromString(request.getOpId());
                 Record record = new Record(request.getRequest(), request.getPrevTS().getTsList() ,reqTS, requestInst, Timestamps.toString(request.getTimestamp()), opId);
@@ -648,7 +625,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             }
         });
         updateLog.sort((record1, record2) -> tsCompare(record1.getPrevTS(), record2.getPrevTS()));
-        //debug-System.out.println("Log after received gossip - " + this.updateLog);
     }
 
     private void enforceReportConsistency(Record current, Record duplicate) {
@@ -668,7 +644,7 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
             } else {
                 current.setTimestamp(duplicate.getTimestamp());
             }
-        } catch (InvalidProtocolBufferException | SauronException ignore) {}
+        } catch (InvalidProtocolBufferException | SauronException e) { /*ignore*/ }
     }
 
     private List<Integer> mergeTS(List<Integer> ts1, List<Integer> ts2) {
@@ -676,7 +652,6 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         for (int i = 0; i < ts1.size(); i++) {
             merged.set(i, Math.max(ts1.get(i), ts2.get(i)));
         }
-        //debug-System.out.println(merged.get(0));
         return merged;
     }
 
