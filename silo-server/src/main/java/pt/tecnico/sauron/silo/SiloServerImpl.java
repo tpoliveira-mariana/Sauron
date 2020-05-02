@@ -539,15 +539,14 @@ public class SiloServerImpl extends SauronGrpc.SauronImplBase {
         int i = 0;
         while (i < updateLog.size()) {
             Record record = updateLog.get(i);
-            if (record.isApplied() && !checkRecordRemoval(record, i))
-                i++;
+            if (record.isApplied() && checkRecordRemoval(record, i))
+                continue;
             else if (tsCompare(valueTS, record.getPrevTS()) == -1)
                 break;
-            else {
+            else if (!record.isApplied() && tsAfter(valueTS, record.getPrevTS()))
                 applyToValue(record);
-                if (!checkRecordRemoval(record, i))
-                    i++;
-            }
+            if (!checkRecordRemoval(record, i))
+                i++;
         }
     }
 

@@ -31,7 +31,7 @@ public class CamJoinIT extends BaseIT{
     @BeforeAll
     public static void oneTimeSetUp() throws ZKNamingException {
         try {
-            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, -1);
+            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, 1, 1);
         } catch(SauronException e){
             System.out.println(e.getErrorMessageLabel());
         }

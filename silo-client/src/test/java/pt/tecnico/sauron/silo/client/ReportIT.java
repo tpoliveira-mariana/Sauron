@@ -31,7 +31,7 @@ public class ReportIT extends BaseIT {
     @BeforeEach
     public void SetUp() throws ZKNamingException {
         try {
-            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, -1);
+            frontend = new SiloFrontend(ZOOHOST, ZOOPORT, 1, 1);
             frontend.ctrlInit(TEST_DATA_FILE);
         }
         catch (SauronException e) {

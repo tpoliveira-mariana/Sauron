@@ -16,6 +16,7 @@
 
 	<properties>
 		<!-- see parent POM for more properties -->
+		<replicaNum>1</replicaNum>
 
 		<mainclass>pt.tecnico.sauron.silo.client.SiloClientApp</mainclass>
 		<zoo.host>localhost</zoo.host>
@@ -114,6 +115,7 @@
 						<argument>${zoo.host}</argument>
 						<argument>${zoo.port}</argument>
 						<argument>${instance}</argument>
+						<argument>${replicaNum}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

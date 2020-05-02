@@ -20,6 +20,7 @@
 
 		<!-- instance number -->
 		<instance>-1</instance>
+		<replicaNum>1</replicaNum>
 
 		<mainclass>pt.tecnico.sauron.eye.EyeApp</mainclass>
 		<zoo.host>localhost</zoo.host>
@@ -83,6 +84,7 @@
 					<arguments>
 						<argument>${zoo.host}</argument>
 						<argument>${zoo.port}</argument>
+						<argument>${replicaNum}</argument>
 						<argument>${instance}</argument>
 					</arguments>
 				</configuration>

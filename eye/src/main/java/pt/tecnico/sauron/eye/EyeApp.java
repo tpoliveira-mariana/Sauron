@@ -26,15 +26,16 @@ public class EyeApp {
 		}
 
 		// check arguments
-		if (args.length > 6 || args.length < 5) {
+		if (args.length > 7 || args.length < 5) {
 			display("Argument(s) missing!");
-			display("Usage: java eye zkhost zkport cameraName latitude longitude [replicaInstance]");
+			display("Usage: java eye zkhost zkport cameraName latitude longitude [replicaNum] [replicaInstance]");
 			return ;
 		}
 
 		try {
-			int instance = args.length == 6 && args[5] != null ? Integer.parseInt(args[5]) : -1;
-			_frontend = new SiloFrontend(args[0], args[1], instance);
+			int replicaNum = args.length >= 6 && args[5] != null ? Integer.parseInt(args[5]) : 1;
+			int instance = args.length == 7 && args[6] != null ? Integer.parseInt(args[6]) : -1;
+			_frontend = new SiloFrontend(args[0], args[1], instance, replicaNum);
 
 			String cameraName = args[2];
 			double lat = Double.parseDouble(args[3]);
