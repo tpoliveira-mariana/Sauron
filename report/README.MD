@@ -48,7 +48,13 @@ Como representado no diagrama, o nosso sistema permite tolerar várias faltas.
 
 * **Faltas do cliente** - Não infuenciam o funcionamento das réplicas.
 
-* **Omissão de mensagens / Partição da rede** - Quando inicia, o cliente estabelece
+* **Partição da rede** - Partições de rede fazem com que réplicas fiquem incontactáveis
+entre si. Assim, é possível que haja réplicas que não consigam fazer gossip com outras
+(nem delas receber mensagens), pelo que ficam incoerentes. Claro que, tendo em conta 
+o nosso protocolo, que está de acordo com o teorema CAP, nada garante que a haja 
+coerência entre réplicas. Conclui-se, portanto, que partições de rede são toleradas.
+
+* **Omissão de mensagens** - Quando inicia, o cliente estabelece
 uma conexão com uma réplica (neste exemplo, a 1). Depois de tal facto, 1 _crasha_.
 O cliente executa um _camJoin()_, que resulta no envio de um _CamJoinRequest_ à réplica 1.
 No entanto, como esta não está ativa, é lançada uma exceção (_UNAVAILABLE_). O cliente
